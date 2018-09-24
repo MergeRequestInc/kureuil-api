@@ -1,2 +1,15 @@
+bin/
+target/
+.cache*
+.idea
+.idea_modules
+.vscode
+.project
+.classpath
+.settings
+.tmpBin/
+*.p12
+.dbeaver-data-sources.xml
 *.class
 *.log
+.scalafmt.conf
