@@ -19,9 +19,9 @@ pipeline {
                 ansiColor('xterm')
                 {
                     sh "git config user.email \"jenkins@xephi.fr\" && git config user.name \"Jenkins\" && git config push.default simple"
-					script {
-						env.GIT_URL = sh(returnStdout: true, script: 'git config --get remote.origin.url').trim()
-					}
+                    script {
+                        env.GIT_URL = sh(returnStdout: true, script: 'git config --get remote.origin.url').trim()
+                    }
                     library 'jenkins-release'
                 }
             }
@@ -36,17 +36,17 @@ pipeline {
             steps {
                 ansiColor('xterm')
                 {
-					/*
-					 * Get the version from file by the regex given
-					*/
-					script {
-						env.current_version = getProjectVersion('version.sbt')
-					}
+                    /*
+                     * Get the version from file by the regex given
+                    */
+                    script {
+                        env.current_version = getProjectVersion('version.sbt')
+                    }
 
                     /*
                      * Remove the -SNAPSHOT and parse the major.minor.patch pattern
                     */
-					releaseVersion('version.sbt')
+                    releaseVersion('version.sbt')
                     echo "Start a release for version ${env.release}."
                 }
             }
@@ -116,16 +116,16 @@ pipeline {
                     sshagent(credentials: ['jenkins-deploy-key'])
                     {
                         generateChangelog()
-						tagAndPush()
-						bumpVersion('version.sbt')
-						script {
-							if (env.BRANCH_NAME.equalsIgnoreCase("master"))
-							{
-								retry(10) {
-									bumpMinor('version.sbt')
-								}
-							}
-						}
+                        tagAndPush()
+                        bumpVersion('version.sbt')
+                        script {
+                            if (env.BRANCH_NAME.equalsIgnoreCase("master"))
+                            {
+                                retry(10) {
+                                    bumpMinor('version.sbt')
+                                }
+                            }
+                        }
                     }
                 }
             }
