@@ -97,9 +97,9 @@ pipeline {
                     step([$class: 'ScoveragePublisher', reportDir: 'target/scala-2.12/scoverage-report', reportFile: 'scoverage.xml'])
 
                     /*
-                     * Archive artifacts on nexus
+                     * Archive artifacts on Jenkins
                     */
-                    archiveArtifacts allowEmptyArchive: true, artifacts: '**/target/**/*.jar **/target/**/*.deb'
+                    archiveArtifacts allowEmptyArchive: true, artifacts: '**/target/**/*.jar kureuil-api/target/kureuil-api*.deb'
                 }
             }
         }
