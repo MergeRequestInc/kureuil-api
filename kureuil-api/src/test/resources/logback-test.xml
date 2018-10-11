@@ -1,0 +1,31 @@
+<configuration>
+    <appender name="stdout" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="stdout" />
+    </root>
+
+    <logger name="slick" level="WARN" additivity="false">
+        <appender-ref ref="stdout" />
+    </logger>
+
+    <logger name="kureuil.TEST" level="DEBUG" additivity="false">
+        <appender-ref ref="stdout" />
+    </logger>
+
+
+    <!--
+    <logger name="slick.jdbc" level="DEBUG" additivity="false">
+        <appender-ref ref="stdout" />
+    </logger>
+    -->
+
+    <logger name="com.zaxxer.hikari" level="WARN" additivity='false'>
+        <appender-ref ref="stdout" />
+    </logger>
+
+</configuration>

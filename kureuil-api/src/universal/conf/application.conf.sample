@@ -1,0 +1,31 @@
+// Example application configuration for kureuil-api
+// Edit this file and copy to /etc/kureuil-api/application.conf
+
+akka {
+    http.server.remote-address-header = on
+
+    loggers = ["akka.event.slf4j.Slf4jLogger"]
+    loglevel = "DEBUG"
+    logging-filter = "akka.event.slf4j.Slf4jLoggingFilter"
+}
+
+// HTTP server parameters
+http {
+  listen-address = "0.0.0.0"
+  listen-port = 2847
+}
+
+// database connection parameters
+
+kureuil-db.db.properties {
+  // Setup database connection (PostgreSQL localhost:5432 assumed)
+  databaseName = ""
+  user = ""
+  password = ""
+}
+
+kamon {
+  prometheus {
+    include-environment-tags = no
+  }
+}

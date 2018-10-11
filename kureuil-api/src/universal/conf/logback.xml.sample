@@ -1,0 +1,25 @@
+<!-- 
+  Example logging configuration for kureuil-api
+  After any necessary changes, copy this file to /etc/kureuil-api/logback.xml
+-->
+
+<configuration scan="true">
+	<appender name="FILE" class="ch.qos.logback.core.FileAppender">
+		<file>/var/log/kureuil-api/main.log</file>
+		<append>true</append>
+		<encoder>
+			<pattern>%d{HH:mm:ss.SSS} %-5level %logger{36} - %msg%n</pattern>
+		</encoder>
+	</appender>
+
+	<root level="INFO">
+		<appender-ref ref="FILE" />
+	</root>
+
+	<logger name="slick" level="WARN" additivity="false">
+		<appender-ref ref="FILE" />
+	</logger>
+	<logger name="com.zaxxer.hikari" level="WARN" additivity='false'>
+		<appender-ref ref="FILE" />
+	</logger>
+</configuration>
