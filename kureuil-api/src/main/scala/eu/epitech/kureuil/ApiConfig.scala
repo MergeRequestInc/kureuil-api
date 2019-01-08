@@ -10,6 +10,7 @@ case class ApiConfig(
     http: HttpConfig,
     debug: DebugConfig,
     flywayRepairOnStartup: Boolean,
+    jwtSecretKey: String,
 )
 
 case class HttpConfig(

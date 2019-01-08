@@ -18,9 +18,10 @@ object CompositeAuthenticator {
   def apply( authenticators: NonEmptyList[Authenticator] ): Authenticator =
     new CompositeAuthenticator( authenticators )
 
-  def fromConfig( backend: KureuilDatabase )( implicit ec: ExecutionContext ): Authenticator = {
-    val internalAuth: Authenticator = InternalAuthenticator( backend )
-    val authenticators              = NonEmptyList.one( internalAuth )
+  def fromConfig( backend: KureuilDatabase, jwtSecretKey: String )( implicit ec: ExecutionContext ): Authenticator = {
+    val internalAuth: Authenticator     = InternalAuthenticator( backend )
+    val jwtAuthenticator: Authenticator = JwtAuthenticator( backend, jwtSecretKey )
+    val authenticators                  = NonEmptyList( internalAuth, List( jwtAuthenticator ) )
     new CompositeAuthenticator( authenticators )
   }
 }

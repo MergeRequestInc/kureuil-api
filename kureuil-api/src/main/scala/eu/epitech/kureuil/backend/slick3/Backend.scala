@@ -18,6 +18,7 @@ abstract class Backend(
     with TimerObserver
     with Tables
     with ApiTokensDao
+    with AuthDao
     with Queries
     with StreamingSupport {
   override implicit val ec: ExecutionContext = system.dispatcher

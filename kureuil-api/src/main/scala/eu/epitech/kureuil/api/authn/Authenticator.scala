@@ -13,6 +13,6 @@ trait Authenticator {
 }
 
 object Authenticator {
-  def apply( backend: KureuilDatabase )( implicit ec: ExecutionContext ): Authenticator =
-    CompositeAuthenticator.fromConfig( backend )
+  def apply( backend: KureuilDatabase, jwtSecretKey: String )( implicit ec: ExecutionContext ): Authenticator =
+    CompositeAuthenticator.fromConfig( backend, jwtSecretKey )
 }

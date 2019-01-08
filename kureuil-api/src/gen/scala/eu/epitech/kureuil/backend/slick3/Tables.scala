@@ -110,24 +110,23 @@ trait Tables extends eu.epitech.kureuil.backend.slick3.SlickEnumSupport {
   /** Entity class storing rows of table channels
     *  @param id Database column id SqlType(bigserial), AutoInc, PrimaryKey
     *  @param name Database column name SqlType(varchar), Length(255,true)
-    *  @param query Database column query SqlType(text)
-    *  @param owner Database column owner SqlType(int8) */
-  case class DbChannel( id: Long, name: String, query: String, owner: Long )
+    *  @param query Database column query SqlType(text) */
+  case class DbChannel( id: Long, name: String, query: String )
 
   /** GetResult implicit for fetching DbChannel objects using plain SQL queries */
   implicit def GetResultDbChannel( implicit e0: GR[Long], e1: GR[String] ): GR[DbChannel] = GR { prs =>
     import prs._
-    DbChannel.tupled( ( <<[Long], <<[String], <<[String], <<[Long] ) )
+    DbChannel.tupled( ( <<[Long], <<[String], <<[String] ) )
   }
 
   /** Table description of table channels. Objects of this class serve as prototypes for rows in queries. */
   class DbChannels( _tableTag: Tag ) extends profile.api.Table[DbChannel]( _tableTag, "channels" ) {
-    def * = ( id, name, query, owner ) <> (DbChannel.tupled, DbChannel.unapply)
+    def * = ( id, name, query ) <> (DbChannel.tupled, DbChannel.unapply)
 
     /** Maps whole row to an option. Useful for outer joins. */
     def ? =
-      ( Rep.Some( id ), Rep.Some( name ), Rep.Some( query ), Rep.Some( owner ) ).shaped.<>( { r =>
-        import r._; _1.map( _ => DbChannel.tupled( ( _1.get, _2.get, _3.get, _4.get ) ) )
+      ( Rep.Some( id ), Rep.Some( name ), Rep.Some( query ) ).shaped.<>( { r =>
+        import r._; _1.map( _ => DbChannel.tupled( ( _1.get, _2.get, _3.get ) ) )
       }, (_: Any) => throw new Exception( "Inserting into ? projection not supported." ) )
 
     /** Database column id SqlType(bigserial), AutoInc, PrimaryKey */
@@ -139,18 +138,8 @@ trait Tables extends eu.epitech.kureuil.backend.slick3.SlickEnumSupport {
     /** Database column query SqlType(text) */
     val query: Rep[String] = column[String]( "query" )
 
-    /** Database column owner SqlType(int8) */
-    val owner: Rep[Long] = column[Long]( "owner" )
-
-    /** Foreign key referencing users (database name channels_owner_fkey) */
-    lazy val dbUsersFk = foreignKey( "channels_owner_fkey", owner, users )(
-      r => r.id,
-      onUpdate = ForeignKeyAction.NoAction,
-      onDelete = ForeignKeyAction.NoAction
-    )
-
-    /** Uniqueness Index over (name,query,owner) (database name channels_name_query_owner_key) */
-    val index1 = index( "channels_name_query_owner_key", ( name, query, owner ), unique = true )
+    /** Uniqueness Index over (name,query) (database name channels_name_query_key) */
+    val index1 = index( "channels_name_query_key", ( name, query ), unique = true )
   }
 
   /** Collection-like TableQuery object for table channels */
@@ -274,30 +263,41 @@ trait Tables extends eu.epitech.kureuil.backend.slick3.SlickEnumSupport {
 
   /** Entity class storing rows of table userChannels
     *  @param idUser Database column id_user SqlType(int8)
-    *  @param idChannel Database column id_channel SqlType(int8) */
-  case class DbUserChannel( idUser: Long, idChannel: Long )
+    *  @param idChannel Database column id_channel SqlType(int8)
+    *  @param isAdmin Database column is_admin SqlType(bool), Default(false)
+    *  @param isSubscribed Database column is_subscribed SqlType(bool), Default(false) */
+  case class DbUserChannel( idUser: Long, idChannel: Long, isAdmin: Boolean = false, isSubscribed: Boolean = false )
 
   /** GetResult implicit for fetching DbUserChannel objects using plain SQL queries */
-  implicit def GetResultDbUserChannel( implicit e0: GR[Long] ): GR[DbUserChannel] = GR { prs =>
+  implicit def GetResultDbUserChannel( implicit e0: GR[Long], e1: GR[Boolean] ): GR[DbUserChannel] = GR { prs =>
     import prs._
-    DbUserChannel.tupled( ( <<[Long], <<[Long] ) )
+    DbUserChannel.tupled( ( <<[Long], <<[Long], <<[Boolean], <<[Boolean] ) )
   }
 
   /** Table description of table user_channels. Objects of this class serve as prototypes for rows in queries. */
   class DbUserChannels( _tableTag: Tag ) extends profile.api.Table[DbUserChannel]( _tableTag, "user_channels" ) {
-    def * = ( idUser, idChannel ) <> (DbUserChannel.tupled, DbUserChannel.unapply)
+    def * = ( idUser, idChannel, isAdmin, isSubscribed ) <> (DbUserChannel.tupled, DbUserChannel.unapply)
 
     /** Maps whole row to an option. Useful for outer joins. */
     def ? =
-      ( Rep.Some( idUser ), Rep.Some( idChannel ) ).shaped.<>( { r =>
-        import r._; _1.map( _ => DbUserChannel.tupled( ( _1.get, _2.get ) ) )
-      }, (_: Any) => throw new Exception( "Inserting into ? projection not supported." ) )
+      ( Rep.Some( idUser ), Rep.Some( idChannel ), Rep.Some( isAdmin ), Rep.Some( isSubscribed ) ).shaped.<>(
+        { r =>
+          import r._; _1.map( _ => DbUserChannel.tupled( ( _1.get, _2.get, _3.get, _4.get ) ) )
+        },
+        (_: Any) => throw new Exception( "Inserting into ? projection not supported." )
+      )
 
     /** Database column id_user SqlType(int8) */
     val idUser: Rep[Long] = column[Long]( "id_user" )
 
     /** Database column id_channel SqlType(int8) */
     val idChannel: Rep[Long] = column[Long]( "id_channel" )
+
+    /** Database column is_admin SqlType(bool), Default(false) */
+    val isAdmin: Rep[Boolean] = column[Boolean]( "is_admin", O.Default( false ) )
+
+    /** Database column is_subscribed SqlType(bool), Default(false) */
+    val isSubscribed: Rep[Boolean] = column[Boolean]( "is_subscribed", O.Default( false ) )
 
     /** Primary key of userChannels (database name user_channels_pkey) */
     val pk = primaryKey( "user_channels_pkey", ( idUser, idChannel ) )

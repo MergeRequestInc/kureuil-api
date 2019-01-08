@@ -56,6 +56,8 @@ object DependenciesPlugin extends AutoPlugin {
         group( "com.typesafe.akka", akkaHttpVersion )( "akka-http" )( "akka-http-testkit" ) ++
         Seq( "de.heikoseeberger" %% "akka-http-circe" % "1.22.0" )
 
+    val jsonWebToken = Seq( "io.igl" %% "jwt" % "1.2.2" )
+
     val sslConfigCore   = Seq( "com.typesafe"        %% "ssl-config-core" % "0.2.2" )
     val reactiveStreams = Seq( "org.reactivestreams" % "reactive-streams" % "1.0.2" )
 

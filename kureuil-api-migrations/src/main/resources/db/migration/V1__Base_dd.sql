@@ -46,14 +46,14 @@ CREATE TABLE channels
 ( id BIGSERIAL PRIMARY KEY
 , name VARCHAR(255) NOT NULL
 , query text NOT NULL
-, owner BIGINT NOT NULL REFERENCES users(id)
-, UNIQUE(name, query, owner)
+, UNIQUE(name, query)
 );
 
 CREATE TABLE user_channels
 ( id_user BIGINT NOT NULL REFERENCES users (id)
 , id_channel BIGINT NOT NULL REFERENCES channels (id)
-
+, is_admin BOOLEAN NOT NULL DEFAULT FALSE
+, is_subscribed BOOLEAN NOT NULL DEFAULT FALSE
 , PRIMARY KEY  (id_user, id_channel)
 , UNIQUE       (id_user, id_channel)
 );

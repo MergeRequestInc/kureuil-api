@@ -24,16 +24,6 @@ val sharedSettings =
       maintainer := "Alexandre Vanhecke <alexandre1.vanhecke@epitech.eu>"
     )
 
-
-val prometheus = Seq( "org.lyranthe.prometheus" %% "client" % "0.9.0-M1" )
-
-val kamon = Seq(
-  "io.kamon" %% "kamon-core"          % "1.1.3",
-  "io.kamon" %% "kamon-akka-2.5"      % "1.1.1",
-  "io.kamon" %% "kamon-akka-http-2.5" % "1.1.0",
-  "io.kamon" %% "kamon-prometheus"    % "1.1.1"
-)
-
 val commonDependencies: Deps =
   kindProjector ++
     splain ++
@@ -102,7 +92,8 @@ val `kureuil-api` = project
         h2database ++
         jose4j ++
         prometheus ++
-        kamon
+        kamon ++
+        jsonWebToken
   )
   .settings( mainClass := Some( "eu.epitech.kureuil.Main" ) )
   .settings( Db.slickBindingsPath := sourceDirectory.value / "gen" / "scala",

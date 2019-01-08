@@ -53,7 +53,7 @@ object Api {
     val mainRoutes = new MainRoutes( mainBackend )
 
     val logging       = new Logging( config.debug )
-    val authenticator = Authenticator( mainBackend )
+    val authenticator = Authenticator( mainBackend, config.jwtSecretKey )
 
     new Api( mainRoutes.route, authenticator.directive, logging.directive )
   }
