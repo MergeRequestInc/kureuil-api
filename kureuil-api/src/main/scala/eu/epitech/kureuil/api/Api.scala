@@ -40,7 +40,7 @@ class Api(
     {
       registrationRoute ~ authenticator { id =>
         mainRoute( id )
-      } ~ complete( StatusCodes.Unauthorized )
+      } ~ complete( StatusCodes.NotFound )
     }
   }
 

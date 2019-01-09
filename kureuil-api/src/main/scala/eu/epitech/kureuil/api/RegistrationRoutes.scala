@@ -32,7 +32,7 @@ class RegistrationRoutes( val backend: KureuilDatabase, jwtSecret: String )( imp
   import akka.http.scaladsl.server.Directives._
 
   val login: Route =
-    path( "user/login" ) {
+    path( "user" / "login" ) {
       (post & entity( as[LoginForm] )) { login =>
         val user = backend.getUser( login.email )
         val resp = user.map {
@@ -56,7 +56,7 @@ class RegistrationRoutes( val backend: KureuilDatabase, jwtSecret: String )( imp
     }
 
   def register: Route =
-    path( "user/register" ) {
+    path( "user" / "register" ) {
       (post & entity( as[RegisterForm] )) { register =>
         val hash = new AuthUtils.HmacSha256( jwtSecret ).apply( register.password )
         complete( backend.registerUser( register.name, register.email, hash ) )
