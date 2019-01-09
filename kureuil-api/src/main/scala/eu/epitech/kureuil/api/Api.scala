@@ -15,6 +15,7 @@ import logs.Logging
 
 class Api(
     val mainRoute: Identifier => Route,
+    val registrationRoute: Route,
     val authenticator: Directive1[Identifier],
     val logging: Directive0
 )( implicit ec: ExecutionContext ) {
@@ -37,7 +38,7 @@ class Api(
 
   val route: Route = mainDirective {
     {
-      authenticator { id =>
+      registrationRoute ~ authenticator { id =>
         mainRoute( id )
       } ~ complete( StatusCodes.Unauthorized )
     }
@@ -50,11 +51,12 @@ object Api {
       implicit ec: ExecutionContext
   ): Api = {
 
-    val mainRoutes = new MainRoutes( mainBackend )
+    val mainRoutes         = new MainRoutes( mainBackend )
+    val registrationRoutes = new RegistrationRoutes( mainBackend, config.jwtSecretKey )
 
     val logging       = new Logging( config.debug )
     val authenticator = Authenticator( mainBackend, config.jwtSecretKey )
 
-    new Api( mainRoutes.route, authenticator.directive, logging.directive )
+    new Api( mainRoutes.route, registrationRoutes.route, authenticator.directive, logging.directive )
   }
 }

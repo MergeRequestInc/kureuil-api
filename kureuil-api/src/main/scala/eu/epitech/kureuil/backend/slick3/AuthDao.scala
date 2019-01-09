@@ -16,7 +16,21 @@ trait AuthDao { self: DbContext with Tables =>
     }
   }
 
-  def getUser( email: String ): Future[Option[User]] = runTx {
+  def toUser: DbUser => model.User = { user =>
+    model.User( user.name, user.email, user.password, user.admin )
+  }
+
+  def getUser( email: String ): Future[Option[model.User]] = runTx {
+    users.filter( p => p.email === email ).result.headOption.map( _.map( toUser ) )
+  }
+
+  def registerUser( name: String, email: String, hash: String ): Future[Boolean] = runTx {
+    for {
+      u <- users ++= Seq( DbUser( 0, name, email, hash ) )
+    } yield u.isDefined
+  }
+
+  def getAuthUser( email: String ): Future[Option[User]] = runTx {
     users
       .filter( p => p.email === email )
       .result

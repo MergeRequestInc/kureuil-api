@@ -16,7 +16,7 @@ class JwtAuthenticator( val backend: KureuilDatabase, jwtSecretKey: String ) ext
 
   private def getUserFromJwt( jwt: Jwt ): Future[Option[User]] = {
     jwt.getClaim[Iss].fold( Future.successful( none[User] ) ) { iss =>
-      backend.getUser( iss.value )
+      backend.getAuthUser( iss.value )
     }
   }
 
