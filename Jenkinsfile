@@ -58,7 +58,7 @@ pipeline {
                     * Use jenkins tools with correct name : Java8 and SBT
                     * Care: Tools name are case sensitives
                     */
-                    sh "${tool name: 'sbt-1.2.3', type: 'org.jvnet.hudson.plugins.SbtPluginBuilder$SbtInstallation'}/bin/sbt clean update test:compile"
+                    sh "${tool name: 'sbt-1.2.8', type: 'org.jvnet.hudson.plugins.SbtPluginBuilder$SbtInstallation'}/bin/sbt clean update test:compile"
                 }
             }
         }
@@ -67,17 +67,17 @@ pipeline {
             steps {
                 ansiColor('xterm') {
                     lock('kureuil-api') {
-                        sh "${tool name: 'sbt-1.2.3', type: 'org.jvnet.hudson.plugins.SbtPluginBuilder$SbtInstallation'}/bin/sbt clean coverage test"
+                        sh "${tool name: 'sbt-1.2.8', type: 'org.jvnet.hudson.plugins.SbtPluginBuilder$SbtInstallation'}/bin/sbt clean coverage test"
                     }
-                    sh "${tool name: 'sbt-1.2.3', type: 'org.jvnet.hudson.plugins.SbtPluginBuilder$SbtInstallation'}/bin/sbt coverageReport"
-                    sh "${tool name: 'sbt-1.2.3', type: 'org.jvnet.hudson.plugins.SbtPluginBuilder$SbtInstallation'}/bin/sbt coverageAggregate"
+                    sh "${tool name: 'sbt-1.2.8', type: 'org.jvnet.hudson.plugins.SbtPluginBuilder$SbtInstallation'}/bin/sbt coverageReport"
+                    sh "${tool name: 'sbt-1.2.8', type: 'org.jvnet.hudson.plugins.SbtPluginBuilder$SbtInstallation'}/bin/sbt coverageAggregate"
                 }
             }
         }
         stage('Package') {
             steps {
                 ansiColor('xterm') {
-                    sh "${tool name: 'sbt-1.2.3', type: 'org.jvnet.hudson.plugins.SbtPluginBuilder$SbtInstallation'}/bin/sbt package debian:packageBin"
+                    sh "${tool name: 'sbt-1.2.8', type: 'org.jvnet.hudson.plugins.SbtPluginBuilder$SbtInstallation'}/bin/sbt package debian:packageBin"
                 }
             }
         }
