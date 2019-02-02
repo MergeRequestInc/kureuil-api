@@ -22,9 +22,16 @@ class MainRoutes( val backend: KureuilDatabase )( implicit val ec: ExecutionCont
         complete( StatusCodes.OK )
       }
     }
+  
+  def channels( id: Identifier ): Route =
+    authzPrefix( pathChannels, GET, Permission.Read )( id ) {
+      pathEndOrSingleSlash {
+        complete( backend.getChannels() )
+      }
+    }
 
   def route( id: Identifier ): Route =
-    testAuthz( id )
+    testAuthz( id ) ~ channels( id )
 
   def authzPrefix( segment: String, expMethod: HttpMethod, permission: Permission )(
       id: Identifier
@@ -40,4 +47,5 @@ class MainRoutes( val backend: KureuilDatabase )( implicit val ec: ExecutionCont
 
 object MainRoutes {
   val pathTest: String = "test"
+  val pathChannels: String = "channels"
 }

@@ -15,5 +15,7 @@ trait KureuilDatabase {
 
   def getApiToken( id: UUID ): Future[Option[( ApiToken, String )]]
 
+  def getChannels(): Future[List[model.Channel]]
+
   def close(): Future[Unit]
 }

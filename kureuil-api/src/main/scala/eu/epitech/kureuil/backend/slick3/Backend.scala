@@ -19,6 +19,7 @@ abstract class Backend(
     with Tables
     with ApiTokensDao
     with AuthDao
+    with ChannelsDao
     with Queries
     with StreamingSupport {
   override implicit val ec: ExecutionContext = system.dispatcher
