@@ -3,11 +3,19 @@ package api
 
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server._
+import io.circe._
+import io.circe.generic.semiauto._
 import scala.concurrent.ExecutionContext
 //
 import backend._
 
 class MainRoutes( val backend: KureuilDatabase )( implicit val ec: ExecutionContext ) {
+
+  case class PostChannel( id: Long, name: String, query: String )
+  object PostChannel {
+    implicit def channelEncoder: Encoder[PostChannel] = deriveEncoder
+    implicit def channelDecoder: Decoder[PostChannel] = deriveDecoder
+  }
 
   import akka.http.scaladsl.server.Directives._
   import HttpMethods._
@@ -22,11 +30,29 @@ class MainRoutes( val backend: KureuilDatabase )( implicit val ec: ExecutionCont
         complete( StatusCodes.OK )
       }
     }
-  
+
   def channels( id: Identifier ): Route =
     authzPrefix( pathChannels, GET, Permission.Read )( id ) {
       pathEndOrSingleSlash {
         complete( backend.getChannels() )
+      } ~ path( "channel" ) {
+        (post & entity(as[PostChannel])) { channel =>
+          val result = backend.createOrUpdate( model.Channel( channel.id, channel.name, channel.query, List() ) )
+          onComplete( result ) { done =>
+            complete( done.map {
+              case 0 => (StatusCodes.BadRequest, "Failed")
+              case _ => (StatusCodes.Created, "Created or Updated")
+            })
+          }
+        }
+      } ~ (path( LongNumber ) & delete) { id =>
+        val result = backend.deleteChannel( id )
+        onComplete( result ) { done =>
+          complete( done.map {
+            case 0 => (StatusCodes.BadRequest, "Failed")
+            case _ => (StatusCodes.OK, "OK")
+          } )
+        }
       }
     }
 

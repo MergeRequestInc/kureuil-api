@@ -1,7 +1,7 @@
-package eu.epitech.kureuil.backend
+package eu.epitech.kureuil
+package backend
 package slick3
 
-import eu.epitech.kureuil.model
 import eu.epitech.kureuil.model._
 import eu.epitech.kureuil.poly._
 import eu.epitech.kureuil.prometheus.Metrics
@@ -19,7 +19,13 @@ trait ChannelsDao { self: DbContext with TimerObserver with StreamingSupport wit
 
   def getChannels(): Future[List[Channel]] = observeDbTime( Metrics.getChannelsLatency, getAllChannels() )
 
-  def getUserChannels( ids: sc.Set[Long] ): Query[DbUserChannels, DbUserChannel, Seq] =
+  def createOrUpdate( channel: Channel ): Future[Int] =
+    observeDbTime( Metrics.putChannelsLatency, channels.insertOrUpdate( DbChannel( channel.id, channel.name, channel.query ) ) )
+
+  def deleteChannel( id: Long ): Future[Int] =
+    observeDbTime( Metrics.deleteChannelLatency, channels.filter( _.id === id ).delete )
+
+  def getUserChannels( ids: sc.Set[Long] ): Query[DbUserChannels, DbUserChannel, sc.Seq] =
     userChannels.filter( _.idChannel inSet ids )
 
   def getAllChannels(): DmlIO[List[Channel]] =

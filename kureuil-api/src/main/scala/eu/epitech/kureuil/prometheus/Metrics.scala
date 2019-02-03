@@ -28,4 +28,7 @@ object Metrics {
     ).labels( label"streamtype" ).register
 
   val getChannelsLatency: LabelledHistogram = createHistogram( metric"api_get_channels_latency" )
+  val putChannelsLatency: LabelledHistogram = createHistogram( metric"api_put_channels_latency" )
+  val deleteChannelLatency: LabelledHistogram = createHistogram( metric"api_delete_channel_latency" )
+  val getLinksLatency: LabelledHistogram = createHistogram( metric"api_get_links_latency" )
 }
