@@ -86,7 +86,6 @@ val `kureuil-api` = project
       slick ++
         logging ++
         akkaHttp ++
-        akkaHttpCors ++
         monocle ++
         circe ++
         pureconfig ++

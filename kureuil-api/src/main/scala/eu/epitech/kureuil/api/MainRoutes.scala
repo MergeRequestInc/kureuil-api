@@ -105,7 +105,7 @@ class MainRoutes( val backend: KureuilDatabase )( implicit val ec: ExecutionCont
     authzPrefix( pathLinks, GET, Permission.Read )( id ) {
       (path( LongNumber ) & get) { id =>
         complete( backend.getLink( id ) )
-      } ~ (path( Segment ) & get) { _ =>
+      } ~ (path( "query" / Segment ) & get) { _ =>
         complete( backend.getAllLinks ) // TODO : HANDLE QUERY CORRECTLY
       }
     } ~ authzPrefix( pathLinks, POST, Permission.Write )( id ) {
