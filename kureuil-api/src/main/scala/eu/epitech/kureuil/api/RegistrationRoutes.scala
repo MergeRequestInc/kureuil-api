@@ -4,6 +4,8 @@ package api
 import akka.http.scaladsl.model.headers.RawHeader
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Route
+import ch.megard.akka.http.cors.scaladsl.CorsDirectives
+import ch.megard.akka.http.cors.scaladsl.settings.CorsSettings
 import eu.epitech.kureuil.api.authn.AuthUtils
 import io.circe.Decoder
 import io.circe.Encoder
@@ -38,9 +40,12 @@ class RegistrationRoutes( val backend: KureuilDatabase, jwtSecret: String )( imp
         val resp = user.map {
           case Some( u ) =>
             if (AuthUtils.checkPassword( jwtSecret, login.password, u.password )) {
-              val jwt = new AuthUtils.JwtToken( jwtSecret ).apply( login.email )
+              val jwt      = new AuthUtils.JwtToken( jwtSecret ).apply( login.email )
+              val settings = CorsSettings.defaultSettings.withExposedHeaders( Seq( "Access-Token", "Authorization" ) )
               respondWithHeader( RawHeader( "Access-Token", jwt ) ) {
-                complete( StatusCodes.OK )
+                CorsDirectives.cors( settings ) {
+                  complete( StatusCodes.OK )
+                }
               }
             } else {
               complete( StatusCodes.Unauthorized )

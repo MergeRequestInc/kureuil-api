@@ -26,7 +26,7 @@ class Api(
   import metrics.Directives._
 
   val cors: Cors = Cors(
-    Seq( HttpMethods.GET, HttpMethods.POST ),
+    Seq( HttpMethods.GET, HttpMethods.POST, HttpMethods.DELETE, HttpMethods.PUT ),
     HttpHeaderRange( `Accept-Encoding`, `Authorization`, `Content-Type`, `Content-Length` )
   )
 
