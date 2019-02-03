@@ -22,11 +22,25 @@ trait ChannelsDao { self: DbContext with TimerObserver with StreamingSupport wit
   def getUserChannels( userEmail: String ): Future[List[Channel]] =
     observeDbTime( Metrics.getChannelsLatency, buildChannelsFor( userEmail ) )
 
-  def createOrUpdate( channel: Channel ): Future[Int] =
+  def createOrUpdate( channel: Channel, userEmail: String ): Future[Int] =
     observeDbTime(
       Metrics.putChannelsLatency,
-      channels.insertOrUpdate( DbChannel( channel.id, channel.name, channel.query ) )
+      createOrUpdateChannel( channel, userEmail )
     )
+
+  def createOrUpdateChannel( channel: Channel, userEmail: String ) = {
+    val insertQuery = channels returning channels.map( _.id ) into ( ( channel, id ) => channel.copy( id = id ) )
+    for {
+      user <- getUserByEmail( userEmail ).result.head
+      up   <- insertQuery += DbChannel( channel.id, channel.name, channel.query )
+      ins  <- userChannels.insertOrUpdate( DbUserChannel( user.id, up.id, true, true ) )
+    } yield ins
+  }
+
+  def getUserByEmail( userEmail: String ) =
+    for {
+      u <- users if u.email === userEmail
+    } yield u
 
   def deleteChannel( id: Long ): Future[Int] =
     observeDbTime( Metrics.deleteChannelLatency, channels.filter( _.id === id ).delete )
