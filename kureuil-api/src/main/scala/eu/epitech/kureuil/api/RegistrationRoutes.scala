@@ -27,6 +27,12 @@ object RegisterForm {
   implicit val decoder: Decoder[RegisterForm] = deriveDecoder
 }
 
+case class LoginResponse( accessToken: String )
+object LoginResponse {
+  implicit val encoder: Encoder[LoginResponse] = Encoder.forProduct1( "access-token" )( _.accessToken )
+  implicit val decoder: Decoder[LoginResponse] = Decoder.forProduct1( "access-token" )( LoginResponse.apply )
+}
+
 class RegistrationRoutes( val backend: KureuilDatabase, jwtSecret: String )( implicit val ec: ExecutionContext ) {
 
   import akka.http.scaladsl.server.Directives._
@@ -41,7 +47,7 @@ class RegistrationRoutes( val backend: KureuilDatabase, jwtSecret: String )( imp
               val jwt = new AuthUtils.JwtToken( jwtSecret ).apply( login.email )
               respondWithHeader( RawHeader( "Access-Control-Expose-Headers", "Access-Token, Authorization" ) ) {
                 respondWithHeader( RawHeader( "Access-Token", jwt ) ) {
-                  complete( StatusCodes.OK )
+                  complete( LoginResponse( jwt ) )
                 }
               }
             } else {
