@@ -4,6 +4,8 @@ import io.igl.jwt._
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 import org.apache.commons.codec.binary.Hex
+
+import scala.util.Try
 //
 object AuthUtils {
   final class HmacSha256( key: String ) {
@@ -19,10 +21,20 @@ object AuthUtils {
     }
   }
 
+  val algorithm               = Algorithm.HS256
+  val requiredHeaders         = Set[HeaderField]( Typ )
+  val requiredClaims          = Set[ClaimField]( Sub )
+  val headers                 = Seq[HeaderValue]( Typ( "JWT" ), Alg( algorithm ) )
+  def claims( claim: String ) = Seq[ClaimValue]( Sub( claim ) )
+
   final class JwtToken( key: String ) {
     def apply( email: String ): String = {
-      val jwt = new DecodedJwt( Seq( Alg( Algorithm.HS256 ), Typ( "JWT" ) ), Seq( Iss( email ) ) )
+      val jwt = new DecodedJwt( headers, claims( email ) )
       jwt.encodedAndSigned( key )
+    }
+
+    def validate( token: String ): Try[Jwt] = {
+      DecodedJwt.validateEncodedJwt( token, key, algorithm, requiredHeaders, requiredClaims )
     }
   }
 

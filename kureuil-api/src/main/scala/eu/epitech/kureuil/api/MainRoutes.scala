@@ -123,7 +123,7 @@ class MainRoutes( val backend: KureuilDatabase )( implicit val ec: ExecutionCont
     }
 
   def route( id: Identifier ): Route =
-    testAuthz( id ) ~ channels( id ) ~ tags( id )
+    channels( id ) ~ tags( id ) ~ links( id ) ~ testAuthz( id )
 
   def authzPrefix( segment: String, expMethod: HttpMethod, permission: Permission )(
       id: Identifier
