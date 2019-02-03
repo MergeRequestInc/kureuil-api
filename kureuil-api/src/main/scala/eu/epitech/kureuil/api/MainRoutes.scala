@@ -11,7 +11,13 @@ import backend._
 
 class MainRoutes( val backend: KureuilDatabase )( implicit val ec: ExecutionContext ) {
 
-  case class PostChannel( id: Long, name: String, query: String )
+  case class UpdateChannel( id: Long, name: String, query: String )
+  object UpdateChannel {
+    implicit def channelEncoder: Encoder[UpdateChannel] = deriveEncoder
+    implicit def channelDecoder: Decoder[UpdateChannel] = deriveDecoder
+  }
+
+  case class PostChannel( name: String, query: String )
   object PostChannel {
     implicit def channelEncoder: Encoder[PostChannel] = deriveEncoder
     implicit def channelDecoder: Decoder[PostChannel] = deriveDecoder
@@ -41,11 +47,23 @@ class MainRoutes( val backend: KureuilDatabase )( implicit val ec: ExecutionCont
     } ~ authzPrefix( pathChannels, POST, Permission.Write )( id ) {
       pathEndOrSingleSlash {
         (post & entity( as[PostChannel] )) { channel =>
+          val result = backend.createOrUpdate( model.Channel( 0, channel.name, channel.query, List() ) )
+          onComplete( result ) { done =>
+            complete( done.map {
+              case 0 => ( StatusCodes.BadRequest, "Failed" )
+              case _ => ( StatusCodes.Created, "Created" )
+            } )
+          }
+        }
+      }
+    } ~ authzPrefix( pathChannels, PUT, Permission.Write )( id ) {
+      pathEndOrSingleSlash {
+        (put & entity( as[UpdateChannel] )) { channel =>
           val result = backend.createOrUpdate( model.Channel( channel.id, channel.name, channel.query, List() ) )
           onComplete( result ) { done =>
             complete( done.map {
               case 0 => ( StatusCodes.BadRequest, "Failed" )
-              case _ => ( StatusCodes.Created, "Created or Updated" )
+              case _ => ( StatusCodes.OK, "Updated" )
             } )
           }
         }
