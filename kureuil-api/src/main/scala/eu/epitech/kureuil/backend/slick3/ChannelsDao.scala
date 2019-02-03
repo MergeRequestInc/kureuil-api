@@ -30,10 +30,11 @@ trait ChannelsDao { self: DbContext with TimerObserver with StreamingSupport wit
 
   def createOrUpdateChannel( channel: Channel, userEmail: String ) = {
     val insertQuery = channels returning channels.map( _.id ) into ( ( channel, id ) => channel.copy( id = id ) )
+    val newChannel  = DbChannel( channel.id, channel.name, channel.query )
     for {
       user <- getUserByEmail( userEmail ).result.head
-      up   <- insertQuery += DbChannel( channel.id, channel.name, channel.query )
-      ins  <- userChannels.insertOrUpdate( DbUserChannel( user.id, up.id, true, true ) )
+      up   <- insertQuery.insertOrUpdate( newChannel )
+      ins  <- userChannels.insertOrUpdate( DbUserChannel( user.id, up.getOrElse( newChannel ).id, true, true ) )
     } yield ins
   }
 
