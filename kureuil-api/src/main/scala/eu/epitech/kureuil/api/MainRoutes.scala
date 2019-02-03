@@ -37,7 +37,7 @@ class MainRoutes( val backend: KureuilDatabase )( implicit val ec: ExecutionCont
         complete( backend.getChannels )
       }
     } ~ authzPrefix( pathChannels, POST, Permission.Write )( id ) {
-      path( "channel" ) {
+      pathEndOrSingleSlash {
         (post & entity( as[PostChannel] )) { channel =>
           val result = backend.createOrUpdate( model.Channel( channel.id, channel.name, channel.query, List() ) )
           onComplete( result ) { done =>
