@@ -115,7 +115,19 @@ class MainRoutes( val backend: KureuilDatabase )( implicit val ec: ExecutionCont
           onComplete( result ) { done =>
             complete( done.map {
               case 0 => ( StatusCodes.BadRequest, "Failed" )
-              case _ => ( StatusCodes.Created, "Created or Updated" )
+              case _ => ( StatusCodes.Created, "Created" )
+            } )
+          }
+        }
+      }
+    } ~ authzPrefix( pathLinks, PUT, Permission.Write )( id ) {
+      pathEndOrSingleSlash {
+        (put & entity( as[model.Link] )) { link =>
+          val result = backend.createOrUpdateLink( link )
+          onComplete( result ) { done =>
+            complete( done.map {
+              case 0 => ( StatusCodes.BadRequest, "Failed" )
+              case _ => ( StatusCodes.OK, "Updated" )
             } )
           }
         }

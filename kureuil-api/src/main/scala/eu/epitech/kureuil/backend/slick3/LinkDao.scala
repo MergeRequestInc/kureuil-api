@@ -30,16 +30,22 @@ trait LinkDao { self: DbContext with TimerObserver with StreamingSupport with Ta
   def createTag( tag: model.Tag ): Future[Int] =
     observeDbTime( Metrics.putTagLatency, tags.insertOrUpdate( DbTag( tag.id, tag.name.some ) ) )
 
-  def upsertLink( link: Link ): DmlIO[Int] = {
+  def upsertLink( link: Link ) = {
+    val insertLink = links returning links.map( _.id ) into ( ( link, id ) => link.copy( id = id ) )
+    val insertTag  = tags returning tags.map( _.id ) into ( ( tag, id ) => tag.copy( id = id ) )
+    val oldLink    = DbLink( link.id, link.url.some )
+    val dbTags = link.tags.map { tag =>
+      DbTag( tag.id, tag.name.some )
+    }
     for {
-      i <- links.insertOrUpdate( DbLink( link.id, link.url.some ) )
-      _ = link.tags.map { l =>
-        linkTags.insertOrUpdate( DbLinkTag( link.id, l.id ) )
+      i <- insertLink.insertOrUpdate( DbLink( link.id, link.url.some ) )
+      _ = dbTags.map { l =>
+        for {
+          t  <- insertTag.insertOrUpdate( l )
+          lt <- linkTags.insertOrUpdate( DbLinkTag( i.getOrElse( oldLink ).id, t.getOrElse( l ).id ) )
+        } yield ()
       }
-      _ = link.tags.map { l =>
-        tags.insertOrUpdate( DbTag( l.id, l.name.some ) )
-      }
-    } yield i
+    } yield 1 // TODO find a way to traverse dbTags and count row changed
   }
 
   def queryTagsByLinkId( id: Long ) =
