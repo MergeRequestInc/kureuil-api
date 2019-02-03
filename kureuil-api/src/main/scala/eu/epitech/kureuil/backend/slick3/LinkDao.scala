@@ -2,6 +2,7 @@ package eu.epitech.kureuil
 package backend
 package slick3
 
+import cats.syntax.option._
 import eu.epitech.kureuil.model._
 import eu.epitech.kureuil.poly._
 import eu.epitech.kureuil.prometheus.Metrics
@@ -18,6 +19,20 @@ trait LinkDao { self: DbContext with TimerObserver with StreamingSupport with Ta
   import profile.api._
 
   def getLinks( channelId: Long ): Future[List[Link]] = observeDbTime( Metrics.getChannelsLatency, getAllLinks( channelId ) )
+
+  def createTag( tag: model.Tag ): Future[Int] = observeDbTime( Metrics.putTagLatency, tags.insertOrUpdate( DbTag( tag.id, tag.name.some ) ) )
+
+  def queryTagsByLinkId( id: Long ) =
+    for {
+      l <- linkTags if l.idLink === id
+      t <- tags if t.id === l.idTag
+    } yield t
+
+  def toTag: scala.Seq[DbTag] => List[model.Tag] = list =>
+    list.map( t => model.Tag( t.id, t.name.getOrElse("") ) ).toList
+
+  def getTagsByLinkId( id: Long ): Future[List[model.Tag]] = observeDbTime( Metrics.getTagByLinkIdLatency, queryTagsByLinkId( id ).result.map( toTag ) )
+  def getAllTags: Future[List[model.Tag]] = observeDbTime( Metrics.getTagsLatency, tags.result.map( toTag ) )
 
   def getLinksByChannel( channelId: Long ) =
     links
@@ -46,7 +61,7 @@ trait LinkDao { self: DbContext with TimerObserver with StreamingSupport with Ta
     def tagsIds: sc.Set[Long] = tagsIdByLink.flatMap { case ( _, t ) => t }.toSet
 
     val toTag: DbTag => model.Tag = tag =>
-      Tag(tag.name.getOrElse(""))
+      Tag( tag.id, tag.name.getOrElse(""))
 
     def getTagsForLink( id: Long ): List[model.Tag] =
       tagsIdByLink.getOrElse( id, sc.Set() ).toList.flatMap( id => tagsById.get( id ) ).map( toTag )

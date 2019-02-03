@@ -17,11 +17,17 @@ trait KureuilDatabase {
 
   def getApiToken( id: UUID ): Future[Option[( ApiToken, String )]]
 
-  def getChannels(): Future[List[model.Channel]]
+  def getChannels: Future[List[model.Channel]]
 
   def createOrUpdate( channel: Channel ): Future[Int]
 
   def deleteChannel( id: Long ): Future[Int]
+
+  def createTag( tag: model.Tag ): Future[Int]
+
+  def getTagsByLinkId( id: Long ): Future[List[model.Tag]]
+
+  def getAllTags: Future[List[model.Tag]]
 
   def getLinks( channelId: Long ): Future[List[model.Link]]
 

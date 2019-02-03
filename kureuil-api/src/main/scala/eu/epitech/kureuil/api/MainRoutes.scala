@@ -34,7 +34,7 @@ class MainRoutes( val backend: KureuilDatabase )( implicit val ec: ExecutionCont
   def channels( id: Identifier ): Route =
     authzPrefix( pathChannels, GET, Permission.Read )( id ) {
       pathEndOrSingleSlash {
-        complete( backend.getChannels() )
+        complete( backend.getChannels )
       } ~ path( "channel" ) {
         (post & entity(as[PostChannel])) { channel =>
           val result = backend.createOrUpdate( model.Channel( channel.id, channel.name, channel.query, List() ) )
@@ -56,8 +56,27 @@ class MainRoutes( val backend: KureuilDatabase )( implicit val ec: ExecutionCont
       }
     }
 
+  def tags( id: Identifier ): Route =
+    authzPrefix( pathTags, GET, Permission.Read )( id ) {
+      pathEndOrSingleSlash {
+        complete( backend.getAllTags )
+      } ~ path( "channel" ) {
+        (post & entity(as[model.Tag])) { tag =>
+          val result = backend.createTag( tag )
+          onComplete( result ) { done =>
+            complete( done.map {
+              case 0 => (StatusCodes.BadRequest, "Failed")
+              case _ => (StatusCodes.Created, "Created or Updated")
+            })
+          }
+        }
+      } ~ (path( LongNumber ) & post) { id =>
+        complete( backend.getTagsByLinkId( id ) )
+      }
+    }
+
   def route( id: Identifier ): Route =
-    testAuthz( id ) ~ channels( id )
+    testAuthz( id ) ~ channels( id ) ~ tags( id )
 
   def authzPrefix( segment: String, expMethod: HttpMethod, permission: Permission )(
       id: Identifier
@@ -74,4 +93,6 @@ class MainRoutes( val backend: KureuilDatabase )( implicit val ec: ExecutionCont
 object MainRoutes {
   val pathTest: String = "test"
   val pathChannels: String = "channels"
+  val pathTags: String = "tags"
+  val pathLinks: String = "links"
 }

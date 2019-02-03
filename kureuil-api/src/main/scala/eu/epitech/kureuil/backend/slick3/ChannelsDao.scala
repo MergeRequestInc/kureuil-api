@@ -17,7 +17,7 @@ trait ChannelsDao { self: DbContext with TimerObserver with StreamingSupport wit
 
   import profile.api._
 
-  def getChannels(): Future[List[Channel]] = observeDbTime( Metrics.getChannelsLatency, getAllChannels() )
+  def getChannels: Future[List[Channel]] = observeDbTime( Metrics.getChannelsLatency, getAllChannels() )
 
   def createOrUpdate( channel: Channel ): Future[Int] =
     observeDbTime( Metrics.putChannelsLatency, channels.insertOrUpdate( DbChannel( channel.id, channel.name, channel.query ) ) )

@@ -4,7 +4,7 @@ package model
 import io.circe._
 import io.circe.generic.semiauto._
 
-case class Tag( name: String )
+case class Tag( id: Long, name: String )
 
 object Tag {
   implicit def tagEncoder: Encoder[Tag] = deriveEncoder
