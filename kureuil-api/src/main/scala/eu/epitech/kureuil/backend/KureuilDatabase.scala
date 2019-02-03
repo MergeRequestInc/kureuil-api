@@ -31,5 +31,11 @@ trait KureuilDatabase {
 
   def getLinks( channelId: Long ): Future[List[model.Link]]
 
+  def getAllLinks: Future[List[model.Link]]
+
+  def createOrUpdateLink( link: model.Link ): Future[Int]
+
+  def getLink( linkId: Long ): Future[List[model.Link]]
+
   def close(): Future[Unit]
 }

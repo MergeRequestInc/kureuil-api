@@ -20,7 +20,10 @@ trait ChannelsDao { self: DbContext with TimerObserver with StreamingSupport wit
   def getChannels: Future[List[Channel]] = observeDbTime( Metrics.getChannelsLatency, getAllChannels() )
 
   def createOrUpdate( channel: Channel ): Future[Int] =
-    observeDbTime( Metrics.putChannelsLatency, channels.insertOrUpdate( DbChannel( channel.id, channel.name, channel.query ) ) )
+    observeDbTime(
+      Metrics.putChannelsLatency,
+      channels.insertOrUpdate( DbChannel( channel.id, channel.name, channel.query ) )
+    )
 
   def deleteChannel( id: Long ): Future[Int] =
     observeDbTime( Metrics.deleteChannelLatency, channels.filter( _.id === id ).delete )
@@ -32,34 +35,35 @@ trait ChannelsDao { self: DbContext with TimerObserver with StreamingSupport wit
     for {
       channels <- foldStream( channels.result, new ChannelBuilder() )
       channelsIds = channels.channelsIds
-      withUsers <- foldStream( getUserChannels(channelsIds).result, channels )
+      withUsers <- foldStream( getUserChannels( channelsIds ).result, channels )
     } yield withUsers.build
 
-
   private[this] class ChannelBuilder() extends CasesBuilder[DbChannel :+: DbUserChannel :+: CNil, List[Channel]] {
-    private val channelById: MutMap[Long, DbChannel] = MutMap()
+    private val channelById: MutMap[Long, DbChannel]                 = MutMap()
     private val usersByChannels: MutMap[Long, MutSet[DbUserChannel]] = MutMap()
-    private val timer: Timer = Timer()
-    def channelsIds: sc.Set[Long] = channelById.keySet
+    private val timer: Timer                                         = Timer()
+    def channelsIds: sc.Set[Long]                                    = channelById.keySet
 
-    def toUserChannel: DbUserChannel => UserChannel = userChannel =>
-      UserChannel( userChannel.idUser, userChannel.isAdmin, userChannel.isSubscribed )
+    def toUserChannel: DbUserChannel => UserChannel =
+      userChannel => UserChannel( userChannel.idUser, userChannel.isAdmin, userChannel.isSubscribed )
 
-    private def toChannel: ((Long, DbChannel)) => Channel = {
+    private def toChannel: ( ( Long, DbChannel ) ) => Channel = {
       case ( id, channel ) =>
-      Channel( id,
-              channel.name,
-              channel.query,
-              usersByChannels.getOrElse( id, MutSet[DbUserChannel]() ).toList.map( toUserChannel ) )
+        Channel(
+          id,
+          channel.name,
+          channel.query,
+          usersByChannels.getOrElse( id, MutSet[DbUserChannel]() ).toList.map( toUserChannel )
+        )
     }
 
     override def build: List[Channel] = {
-      Metrics.streamingLatency.labelValues("channeloverview").observeDuration( timer )
-      channelById.toMap.map(toChannel).toList
+      Metrics.streamingLatency.labelValues( "channeloverview" ).observeDuration( timer )
+      channelById.toMap.map( toChannel ).toList
     }
 
     object append extends Poly1 {
-      implicit def atChannel: Case.Aux[DbChannel, This] = at[DbChannel].apply[This]( addChannel )
+      implicit def atChannel: Case.Aux[DbChannel, This]         = at[DbChannel].apply[This]( addChannel )
       implicit def atUserChannel: Case.Aux[DbUserChannel, This] = at[DbUserChannel].apply[This]( addUserChannel )
     }
 
@@ -73,7 +77,7 @@ trait ChannelsDao { self: DbContext with TimerObserver with StreamingSupport wit
     }
 
     private def addUserChannel( user: DbUserChannel ): this.type = {
-      usersByChannels.getOrElseUpdate( user.idChannel, MutSet(user) ) += user
+      usersByChannels.getOrElseUpdate( user.idChannel, MutSet( user ) ) += user
       this
     }
 

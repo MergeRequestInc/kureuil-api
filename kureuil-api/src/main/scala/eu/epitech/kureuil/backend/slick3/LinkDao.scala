@@ -18,9 +18,29 @@ trait LinkDao { self: DbContext with TimerObserver with StreamingSupport with Ta
 
   import profile.api._
 
-  def getLinks( channelId: Long ): Future[List[Link]] = observeDbTime( Metrics.getChannelsLatency, getAllLinks( channelId ) )
+  def getLinks( channelId: Long ): Future[List[Link]] =
+    observeDbTime( Metrics.getLinksLatency, getAllLinks( channelId ) )
 
-  def createTag( tag: model.Tag ): Future[Int] = observeDbTime( Metrics.putTagLatency, tags.insertOrUpdate( DbTag( tag.id, tag.name.some ) ) )
+  def getLink( linkId: Long ): Future[List[Link]] = observeDbTime( Metrics.getLinksLatency, getLinksById( linkId ) )
+
+  def getAllLinks: Future[List[Link]] = observeDbTime( Metrics.getLinksLatency, buildAllLinks )
+
+  def createOrUpdateLink( link: model.Link ): Future[Int] = observeDbTime( Metrics.putLinkLatency, upsertLink( link ) )
+
+  def createTag( tag: model.Tag ): Future[Int] =
+    observeDbTime( Metrics.putTagLatency, tags.insertOrUpdate( DbTag( tag.id, tag.name.some ) ) )
+
+  def upsertLink( link: Link ): DmlIO[Int] = {
+    for {
+      i <- links.insertOrUpdate( DbLink( link.id, link.url.some ) )
+      _ = link.tags.map { l =>
+        linkTags.insertOrUpdate( DbLinkTag( link.id, l.id ) )
+      }
+      _ = link.tags.map { l =>
+        tags.insertOrUpdate( DbTag( l.id, l.name.some ) )
+      }
+    } yield i
+  }
 
   def queryTagsByLinkId( id: Long ) =
     for {
@@ -28,10 +48,11 @@ trait LinkDao { self: DbContext with TimerObserver with StreamingSupport with Ta
       t <- tags if t.id === l.idTag
     } yield t
 
-  def toTag: scala.Seq[DbTag] => List[model.Tag] = list =>
-    list.map( t => model.Tag( t.id, t.name.getOrElse("") ) ).toList
+  def toTag: scala.Seq[DbTag] => List[model.Tag] =
+    list => list.map( t => model.Tag( t.id, t.name.getOrElse( "" ) ) ).toList
 
-  def getTagsByLinkId( id: Long ): Future[List[model.Tag]] = observeDbTime( Metrics.getTagByLinkIdLatency, queryTagsByLinkId( id ).result.map( toTag ) )
+  def getTagsByLinkId( id: Long ): Future[List[model.Tag]] =
+    observeDbTime( Metrics.getTagByLinkIdLatency, queryTagsByLinkId( id ).result.map( toTag ) )
   def getAllTags: Future[List[model.Tag]] = observeDbTime( Metrics.getTagsLatency, tags.result.map( toTag ) )
 
   def getLinksByChannel( channelId: Long ) =
@@ -52,33 +73,51 @@ trait LinkDao { self: DbContext with TimerObserver with StreamingSupport with Ta
       withTags <- foldStream( getTags( tagsIds ).result, withLinkTag )
     } yield withTags.build
 
-  private[this] class LinkBuilder() extends CasesBuilder[DbLink :+: DbLinkTag :+: DbTag :+: CNil, List[Link]] {
-    private val linkById: MutMap[Long, DbLink] = MutMap()
-    private val tagsIdByLink: MutMap[Long, MutSet[Long]] = MutMap()
-    private val tagsById: MutMap[Long, DbTag] = MutMap()
-    private val timer: Timer = Timer()
-    def linksIds: sc.Set[Long] = linkById.keySet
-    def tagsIds: sc.Set[Long] = tagsIdByLink.flatMap { case ( _, t ) => t }.toSet
+  def buildAllLinks: DmlIO[List[Link]] =
+    for {
+      linksBuilder <- foldStream( links.result, new LinkBuilder() )
+      linksIds = linksBuilder.linksIds
+      withLinkTag <- foldStream( getLinkTags( linksIds ).result, linksBuilder )
+      tagsIds = withLinkTag.tagsIds
+      withTags <- foldStream( getTags( tagsIds ).result, withLinkTag )
+    } yield withTags.build
 
-    val toTag: DbTag => model.Tag = tag =>
-      Tag( tag.id, tag.name.getOrElse(""))
+  def getLinksById( linkId: Long ): DmlIO[List[Link]] =
+    for {
+      linksBuilder <- foldStream( links.filter( _.id === linkId ).result, new LinkBuilder() )
+      linksIds = linksBuilder.linksIds
+      withLinkTag <- foldStream( getLinkTags( linksIds ).result, linksBuilder )
+      tagsIds = withLinkTag.tagsIds
+      withTags <- foldStream( getTags( tagsIds ).result, withLinkTag )
+    } yield withTags.build
+
+  private[this] class LinkBuilder() extends CasesBuilder[DbLink :+: DbLinkTag :+: DbTag :+: CNil, List[Link]] {
+    private val linkById: MutMap[Long, DbLink]           = MutMap()
+    private val tagsIdByLink: MutMap[Long, MutSet[Long]] = MutMap()
+    private val tagsById: MutMap[Long, DbTag]            = MutMap()
+    private val timer: Timer                             = Timer()
+    def linksIds: sc.Set[Long]                           = linkById.keySet
+    def tagsIds: sc.Set[Long]                            = tagsIdByLink.flatMap { case ( _, t ) => t }.toSet
+
+    val toTag: DbTag => model.Tag = tag => Tag( tag.id, tag.name.getOrElse( "" ) )
 
     def getTagsForLink( id: Long ): List[model.Tag] =
       tagsIdByLink.getOrElse( id, sc.Set() ).toList.flatMap( id => tagsById.get( id ) ).map( toTag )
 
-    def toLink: ((Long, DbLink)) => Link = { case (id, link) =>
-      Link( link.url.getOrElse(""), getTagsForLink( id ) )
+    def toLink: ( ( Long, DbLink ) ) => Link = {
+      case ( id, link ) =>
+        Link( id, link.url.getOrElse( "" ), getTagsForLink( id ) )
     }
 
     override def build: List[Link] = {
-      Metrics.streamingLatency.labelValues("channeloverview").observeDuration( timer )
+      Metrics.streamingLatency.labelValues( "channeloverview" ).observeDuration( timer )
       linkById.toMap.map( toLink ).toList
     }
 
     object append extends Poly1 {
-      implicit def atLink: Case.Aux[DbLink, This] = at[DbLink].apply[This]( addLink )
+      implicit def atLink: Case.Aux[DbLink, This]       = at[DbLink].apply[This]( addLink )
       implicit def atLinkTag: Case.Aux[DbLinkTag, This] = at[DbLinkTag].apply[This]( addLinkTag )
-      implicit def atTag: Case.Aux[DbTag, This] = at[DbTag].apply[This]( addTag )
+      implicit def atTag: Case.Aux[DbTag, This]         = at[DbTag].apply[This]( addTag )
     }
 
     override val poly: append.type = append

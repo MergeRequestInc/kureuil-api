@@ -35,22 +35,26 @@ class MainRoutes( val backend: KureuilDatabase )( implicit val ec: ExecutionCont
     authzPrefix( pathChannels, GET, Permission.Read )( id ) {
       pathEndOrSingleSlash {
         complete( backend.getChannels )
-      } ~ path( "channel" ) {
-        (post & entity(as[PostChannel])) { channel =>
+      }
+    } ~ authzPrefix( pathChannels, POST, Permission.Write )( id ) {
+      path( "channel" ) {
+        (post & entity( as[PostChannel] )) { channel =>
           val result = backend.createOrUpdate( model.Channel( channel.id, channel.name, channel.query, List() ) )
           onComplete( result ) { done =>
             complete( done.map {
-              case 0 => (StatusCodes.BadRequest, "Failed")
-              case _ => (StatusCodes.Created, "Created or Updated")
-            })
+              case 0 => ( StatusCodes.BadRequest, "Failed" )
+              case _ => ( StatusCodes.Created, "Created or Updated" )
+            } )
           }
         }
-      } ~ (path( LongNumber ) & delete) { id =>
+      }
+    } ~ authzPrefix( pathChannels, DELETE, Permission.Write )( id ) {
+      (path( LongNumber ) & delete) { id =>
         val result = backend.deleteChannel( id )
         onComplete( result ) { done =>
           complete( done.map {
-            case 0 => (StatusCodes.BadRequest, "Failed")
-            case _ => (StatusCodes.OK, "OK")
+            case 0 => ( StatusCodes.BadRequest, "Failed" )
+            case _ => ( StatusCodes.OK, "OK" )
           } )
         }
       }
@@ -60,18 +64,41 @@ class MainRoutes( val backend: KureuilDatabase )( implicit val ec: ExecutionCont
     authzPrefix( pathTags, GET, Permission.Read )( id ) {
       pathEndOrSingleSlash {
         complete( backend.getAllTags )
-      } ~ path( "channel" ) {
-        (post & entity(as[model.Tag])) { tag =>
+      } ~ path( LongNumber ) { id =>
+        complete( backend.getTagsByLinkId( id ) )
+      }
+    } ~ authzPrefix( pathTags, POST, Permission.Write )( id ) {
+      pathEndOrSingleSlash {
+        (post & entity( as[model.Tag] )) { tag =>
           val result = backend.createTag( tag )
           onComplete( result ) { done =>
             complete( done.map {
-              case 0 => (StatusCodes.BadRequest, "Failed")
-              case _ => (StatusCodes.Created, "Created or Updated")
-            })
+              case 0 => ( StatusCodes.BadRequest, "Failed" )
+              case _ => ( StatusCodes.Created, "Created or Updated" )
+            } )
           }
         }
-      } ~ (path( LongNumber ) & post) { id =>
-        complete( backend.getTagsByLinkId( id ) )
+      }
+    }
+
+  def links( id: Identifier ): Route =
+    authzPrefix( pathLinks, GET, Permission.Read )( id ) {
+      (path( LongNumber ) & get) { id =>
+        complete( backend.getLink( id ) )
+      } ~ (path( Segment ) & get) { _ =>
+        complete( backend.getAllLinks ) // TODO : HANDLE QUERY CORRECTLY
+      }
+    } ~ authzPrefix( pathLinks, POST, Permission.Write )( id ) {
+      pathEndOrSingleSlash {
+        (post & entity( as[model.Link] )) { link =>
+          val result = backend.createOrUpdateLink( link )
+          onComplete( result ) { done =>
+            complete( done.map {
+              case 0 => ( StatusCodes.BadRequest, "Failed" )
+              case _ => ( StatusCodes.Created, "Created or Updated" )
+            } )
+          }
+        }
       }
     }
 
@@ -91,8 +118,8 @@ class MainRoutes( val backend: KureuilDatabase )( implicit val ec: ExecutionCont
 }
 
 object MainRoutes {
-  val pathTest: String = "test"
+  val pathTest: String     = "test"
   val pathChannels: String = "channels"
-  val pathTags: String = "tags"
-  val pathLinks: String = "links"
+  val pathTags: String     = "tags"
+  val pathLinks: String    = "links"
 }

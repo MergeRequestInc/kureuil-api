@@ -4,7 +4,7 @@ package model
 import io.circe._
 import io.circe.generic.semiauto._
 
-case class Link( url: String, tags: List[Tag] )
+case class Link( id: Long, url: String, tags: List[Tag] )
 
 object Link {
   implicit def linkEncoder: Encoder[Link] = deriveEncoder
