@@ -19,6 +19,9 @@ trait ChannelsDao { self: DbContext with TimerObserver with StreamingSupport wit
 
   def getChannels: Future[List[Channel]] = observeDbTime( Metrics.getChannelsLatency, getAllChannels() )
 
+  def getUserChannels( userEmail: String ): Future[List[Channel]] =
+    observeDbTime( Metrics.getChannelsLatency, buildChannelsFor( userEmail ) )
+
   def createOrUpdate( channel: Channel ): Future[Int] =
     observeDbTime(
       Metrics.putChannelsLatency,
@@ -31,9 +34,23 @@ trait ChannelsDao { self: DbContext with TimerObserver with StreamingSupport wit
   def getUserChannels( ids: sc.Set[Long] ): Query[DbUserChannels, DbUserChannel, sc.Seq] =
     userChannels.filter( _.idChannel inSet ids )
 
+  def queryChannelsFor( userEmail: String ) =
+    for {
+      u  <- users if u.email === userEmail
+      uc <- userChannels if uc.idUser === u.id
+      c  <- channels if c.id === uc.idChannel
+    } yield c
+
   def getAllChannels(): DmlIO[List[Channel]] =
     for {
       channels <- foldStream( channels.result, new ChannelBuilder() )
+      channelsIds = channels.channelsIds
+      withUsers <- foldStream( getUserChannels( channelsIds ).result, channels )
+    } yield withUsers.build
+
+  def buildChannelsFor( userEmail: String ): DmlIO[List[Channel]] =
+    for {
+      channels <- foldStream( queryChannelsFor( userEmail ).result, new ChannelBuilder() )
       channelsIds = channels.channelsIds
       withUsers <- foldStream( getUserChannels( channelsIds ).result, channels )
     } yield withUsers.build

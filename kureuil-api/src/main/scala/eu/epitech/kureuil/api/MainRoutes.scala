@@ -35,6 +35,8 @@ class MainRoutes( val backend: KureuilDatabase )( implicit val ec: ExecutionCont
     authzPrefix( pathChannels, GET, Permission.Read )( id ) {
       pathEndOrSingleSlash {
         complete( backend.getChannels )
+      } ~ path( "user" ) {
+        complete( backend.getUserChannels( id.id ) )
       }
     } ~ authzPrefix( pathChannels, POST, Permission.Write )( id ) {
       pathEndOrSingleSlash {
