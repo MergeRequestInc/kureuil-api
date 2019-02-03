@@ -213,14 +213,14 @@ trait Tables extends eu.epitech.kureuil.backend.slick3.SlickEnumSupport {
     lazy val dbLinksFk = foreignKey( "link_tags_id_link_fkey", idLink, links )(
       r => r.id,
       onUpdate = ForeignKeyAction.NoAction,
-      onDelete = ForeignKeyAction.NoAction
+      onDelete = ForeignKeyAction.Cascade
     )
 
     /** Foreign key referencing tags (database name link_tags_id_tag_fkey) */
     lazy val dbTagsFk = foreignKey( "link_tags_id_tag_fkey", idTag, tags )(
       r => r.id,
       onUpdate = ForeignKeyAction.NoAction,
-      onDelete = ForeignKeyAction.NoAction
+      onDelete = ForeignKeyAction.Cascade
     )
   }
 
@@ -306,14 +306,14 @@ trait Tables extends eu.epitech.kureuil.backend.slick3.SlickEnumSupport {
     lazy val dbChannelsFk = foreignKey( "user_channels_id_channel_fkey", idChannel, channels )(
       r => r.id,
       onUpdate = ForeignKeyAction.NoAction,
-      onDelete = ForeignKeyAction.NoAction
+      onDelete = ForeignKeyAction.Cascade
     )
 
     /** Foreign key referencing users (database name user_channels_id_user_fkey) */
     lazy val dbUsersFk = foreignKey( "user_channels_id_user_fkey", idUser, users )(
       r => r.id,
       onUpdate = ForeignKeyAction.NoAction,
-      onDelete = ForeignKeyAction.NoAction
+      onDelete = ForeignKeyAction.Cascade
     )
   }
 

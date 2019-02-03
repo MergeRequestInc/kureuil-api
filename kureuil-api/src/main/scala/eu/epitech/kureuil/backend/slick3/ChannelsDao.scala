@@ -44,7 +44,13 @@ trait ChannelsDao { self: DbContext with TimerObserver with StreamingSupport wit
     } yield u
 
   def deleteChannel( id: Long ): Future[Int] =
-    observeDbTime( Metrics.deleteChannelLatency, channels.filter( _.id === id ).delete )
+    observeDbTime( Metrics.deleteChannelLatency, queryDeleteChannel( id ) )
+
+  def queryDeleteChannel( id: Long ) =
+    for {
+      _ <- userChannels.filter( _.idChannel === id ).delete
+      c <- channels.filter( _.id === id ).delete
+    } yield c
 
   def getUserChannels( ids: sc.Set[Long] ): Query[DbUserChannels, DbUserChannel, sc.Seq] =
     userChannels.filter( _.idChannel inSet ids )
