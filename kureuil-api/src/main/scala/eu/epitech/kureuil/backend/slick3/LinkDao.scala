@@ -2,7 +2,7 @@ package eu.epitech.kureuil
 package backend
 package slick3
 
-import cats.syntax.option._
+import cats.implicits._
 import eu.epitech.kureuil.model._
 import eu.epitech.kureuil.poly._
 import eu.epitech.kureuil.prometheus.Metrics
@@ -25,7 +25,8 @@ trait LinkDao { self: DbContext with TimerObserver with StreamingSupport with Ta
 
   def getAllLinks: Future[List[Link]] = observeDbTime( Metrics.getLinksLatency, buildAllLinks )
 
-  def createOrUpdateLink( link: model.Link ): Future[Int] = observeDbTime( Metrics.putLinkLatency, upsertLink( link ) )
+  def createOrUpdateLink( link: model.Link ): Future[Int] =
+    observeDbTime( Metrics.putLinkLatency, upsertLink( link ).map( _.sum ) )
 
   def createTag( tag: model.Tag ): Future[Int] =
     observeDbTime( Metrics.putTagLatency, tags.insertOrUpdate( DbTag( tag.id, tag.name.some ) ) )
@@ -39,13 +40,15 @@ trait LinkDao { self: DbContext with TimerObserver with StreamingSupport with Ta
     }
     for {
       i <- insertLink.insertOrUpdate( DbLink( link.id, link.url.some ) )
-      _ = dbTags.map { l =>
-        for {
-          t  <- insertTag.insertOrUpdate( l )
-          lt <- linkTags.insertOrUpdate( DbLinkTag( i.getOrElse( oldLink ).id, t.getOrElse( l ).id ) )
-        } yield ()
-      }
-    } yield 1 // TODO find a way to traverse dbTags and count row changed
+    } yield
+      for {
+        _ <- dbTags.traverse { l =>
+              for {
+                t  <- insertTag.insertOrUpdate( l )
+                lt <- linkTags.insertOrUpdate( DbLinkTag( i.getOrElse( oldLink ).id, t.getOrElse( l ).id ) )
+              } yield 2
+            }
+      } yield 1 // TODO find a way to traverse dbTags and count row changed
   }
 
   def queryTagsByLinkId( id: Long ) =
