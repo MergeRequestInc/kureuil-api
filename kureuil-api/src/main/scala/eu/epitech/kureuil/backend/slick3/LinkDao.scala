@@ -25,6 +25,15 @@ trait LinkDao { self: Queries with DbContext with TimerObserver with StreamingSu
 
   def getAllLinks: Future[List[Link]] = observeDbTime( Metrics.getLinksLatency, buildAllLinks )
 
+  def deleteLink( linkId: Long ): Future[Unit] = observeDbTime( Metrics.deleteLinkLatency, deleteLinkById( linkId ) )
+
+  def deleteLinkById( linkId: Long ): DmlIO[Unit] = {
+    for {
+      _ <- linkTags.filter( _.idLink === linkId ).delete
+      _ <- links.filter( _.id === linkId ).delete
+    } yield ()
+  }
+
   def createOrUpdateLink( link: model.Link ): Future[Unit] =
     observeDbTime( Metrics.putLinkLatency, upsertLink( link ) )
 

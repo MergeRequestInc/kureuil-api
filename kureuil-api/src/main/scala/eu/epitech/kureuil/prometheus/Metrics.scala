@@ -31,6 +31,7 @@ object Metrics {
   val putChannelsLatency: LabelledHistogram    = createHistogram( metric"api_put_channels_latency" )
   val deleteChannelLatency: LabelledHistogram  = createHistogram( metric"api_delete_channel_latency" )
   val getLinksLatency: LabelledHistogram       = createHistogram( metric"api_get_links_latency" )
+  val deleteLinkLatency: LabelledHistogram     = createHistogram( metric"api_delete_link_latency" )
   val putTagLatency: LabelledHistogram         = createHistogram( metric"api_put_tag_latency" )
   val getTagByLinkIdLatency: LabelledHistogram = createHistogram( metric"api_tag_by_link_id_latency" )
   val getTagsLatency: LabelledHistogram        = createHistogram( metric"api_get_tags_latency" )

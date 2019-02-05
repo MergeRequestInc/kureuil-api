@@ -131,6 +131,14 @@ class MainRoutes( val backend: KureuilDatabase )( implicit val ec: ExecutionCont
           }
         }
       }
+    } ~ authzPrefix( pathLinks, DELETE, Permission.Write )( id ) {
+      path( LongNumber ) { linkId =>
+        val result = backend.deleteLink( linkId )
+        onComplete( result ) {
+          case Failure( e ) => complete( ( StatusCodes.BadRequest, e.getMessage ) )
+          case Success( _ ) => complete( ( StatusCodes.OK, "Deleted" ) )
+        }
+      }
     }
 
   def route( id: Identifier ): Route =
