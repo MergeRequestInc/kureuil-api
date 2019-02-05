@@ -14,7 +14,7 @@ import scala.collection.mutable.{Map => MutMap}
 import scala.collection.mutable.{Set => MutSet}
 import scala.concurrent.Future
 
-trait LinkDao { self: DbContext with TimerObserver with StreamingSupport with Tables =>
+trait LinkDao { self: Queries with DbContext with TimerObserver with StreamingSupport with Tables =>
 
   import profile.api._
 
@@ -25,31 +25,45 @@ trait LinkDao { self: DbContext with TimerObserver with StreamingSupport with Ta
 
   def getAllLinks: Future[List[Link]] = observeDbTime( Metrics.getLinksLatency, buildAllLinks )
 
-  def createOrUpdateLink( link: model.Link ): Future[Int] =
-    observeDbTime( Metrics.putLinkLatency, upsertLink( link ).map( _.sum ) )
+  def createOrUpdateLink( link: model.Link ): Future[Unit] =
+    observeDbTime( Metrics.putLinkLatency, upsertLink( link ) )
 
   def createTag( tag: model.Tag ): Future[Int] =
     observeDbTime( Metrics.putTagLatency, tags.insertOrUpdate( DbTag( tag.id, tag.name.some ) ) )
 
-  def upsertLink( link: Link ) = {
-    val insertLink = links returning links.map( _.id ) into ( ( link, id ) => link.copy( id = id ) )
-    val insertTag  = tags returning tags.map( _.id ) into ( ( tag, id ) => tag.copy( id = id ) )
-    val oldLink    = DbLink( link.id, link.url.some )
+  def upsertLink( link: Link ): DmlIO[Unit] = {
+    val dbLink = DbLink( 0, link.url.some )
     val dbTags = link.tags.map { tag =>
-      DbTag( tag.id, tag.name.some )
+      DbTag( 0, tag.name.some )
     }
     for {
-      i <- insertLink.insertOrUpdate( DbLink( link.id, link.url.some ) )
-    } yield
-      for {
-        _ <- dbTags.map { l =>
-              for {
-                t  <- insertTag.insertOrUpdate( l )
-                lt <- linkTags.insertOrUpdate( DbLinkTag( i.getOrElse( oldLink ).id, t.getOrElse( l ).id ) )
-              } yield 2
-            }
-      } yield 1 // TODO find a way to traverse dbTags and count row changed
+      l <- getOrInsertLink( dbLink )
+      t <- DmlIO.sequence( dbTags.map { dbTag =>
+            insertDbTag( l.id )( dbTag )
+          } )
+      _ <- linkTags ++= t
+    } yield ()
   }
+
+  def insertDbTag( linkId: Long )( tag: DbTag ) = {
+    for {
+      t <- getOrInsertTag( tag )
+    } yield DbLinkTag( linkId, t.id )
+  }
+
+  def getOrInsertLink = new GetOrInsert[Long, DbLink, DbLinks](
+    links,
+    _.id,
+    (v: DbLink) => (r: DbLinks) => r.url.getOrElse( "a" ) === v.url.getOrElse( "b" ),
+    ( v, k ) => v.copy( id = k )
+  )
+
+  def getOrInsertTag = new GetOrInsert[Long, DbTag, DbTags](
+    tags,
+    _.id,
+    (v: DbTag) => (r: DbTags) => r.name.getOrElse( "a" ) === v.name.getOrElse( "b" ),
+    ( v, k ) => v.copy( id = k )
+  )
 
   def queryTagsByLinkId( id: Long ) =
     for {

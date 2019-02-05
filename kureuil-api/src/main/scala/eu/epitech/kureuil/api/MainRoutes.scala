@@ -5,7 +5,10 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.server._
 import io.circe._
 import io.circe.generic.semiauto._
+
 import scala.concurrent.ExecutionContext
+import scala.util.Failure
+import scala.util.Success
 //
 import backend._
 
@@ -112,11 +115,9 @@ class MainRoutes( val backend: KureuilDatabase )( implicit val ec: ExecutionCont
       pathEndOrSingleSlash {
         (post & entity( as[model.Link] )) { link =>
           val result = backend.createOrUpdateLink( link )
-          onComplete( result ) { done =>
-            complete( done.map {
-              case 0 => ( StatusCodes.BadRequest, "Failed" )
-              case _ => ( StatusCodes.Created, "Created" )
-            } )
+          onComplete( result ) {
+            case Failure( e ) => complete( ( StatusCodes.BadRequest, e.getMessage ) )
+            case Success( _ ) => complete( ( StatusCodes.Created, "Created" ) )
           }
         }
       }
@@ -124,11 +125,9 @@ class MainRoutes( val backend: KureuilDatabase )( implicit val ec: ExecutionCont
       pathEndOrSingleSlash {
         (put & entity( as[model.Link] )) { link =>
           val result = backend.createOrUpdateLink( link )
-          onComplete( result ) { done =>
-            complete( done.map {
-              case 0 => ( StatusCodes.BadRequest, "Failed" )
-              case _ => ( StatusCodes.OK, "Updated" )
-            } )
+          onComplete( result ) {
+            case Failure( e ) => complete( ( StatusCodes.BadRequest, e.getMessage ) )
+            case Success( _ ) => complete( ( StatusCodes.OK, "Updated" ) )
           }
         }
       }
