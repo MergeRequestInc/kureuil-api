@@ -21,7 +21,7 @@ trait LinkDao { self: Queries with DbContext with TimerObserver with StreamingSu
   def getLinks( channelId: Long ): Future[List[Link]] =
     observeDbTime( Metrics.getLinksLatency, getAllLinks( channelId ) )
 
-  def getLink( linkId: Long ): Future[List[Link]] = observeDbTime( Metrics.getLinksLatency, getLinksById( linkId ) )
+  def getLink( linkId: Long ): Future[Link] = observeDbTime( Metrics.getLinksLatency, getLinksById( linkId ) )
 
   def getAllLinks: Future[List[Link]] = observeDbTime( Metrics.getLinksLatency, buildAllLinks )
 
@@ -105,14 +105,14 @@ trait LinkDao { self: Queries with DbContext with TimerObserver with StreamingSu
       withTags <- foldStream( getTags( tagsIds ).result, withLinkTag )
     } yield withTags.build
 
-  def getLinksById( linkId: Long ): DmlIO[List[Link]] =
+  def getLinksById( linkId: Long ): DmlIO[Link] =
     for {
       linksBuilder <- foldStream( links.filter( _.id === linkId ).result, new LinkBuilder() )
       linksIds = linksBuilder.linksIds
       withLinkTag <- foldStream( getLinkTags( linksIds ).result, linksBuilder )
       tagsIds = withLinkTag.tagsIds
       withTags <- foldStream( getTags( tagsIds ).result, withLinkTag )
-    } yield withTags.build
+    } yield withTags.build.head
 
   private[this] class LinkBuilder() extends CasesBuilder[DbLink :+: DbLinkTag :+: DbTag :+: CNil, List[Link]] {
     private val linkById: MutMap[Long, DbLink]           = MutMap()
