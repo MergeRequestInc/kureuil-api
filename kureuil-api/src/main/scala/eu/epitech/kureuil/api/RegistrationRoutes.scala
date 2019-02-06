@@ -58,7 +58,7 @@ class RegistrationRoutes( val backend: KureuilDatabase, jwtSecret: String )( imp
         }
         onComplete( resp ) {
           case Success( value ) => value
-          case Failure( ex )    => complete( ( StatusCodes.InternalServerError, s"An error occured" ) )
+          case Failure( ex )    => complete( ( StatusCodes.InternalServerError, s"An error occured : ${ex.getMessage}" ) )
         }
       }
     }
@@ -66,8 +66,13 @@ class RegistrationRoutes( val backend: KureuilDatabase, jwtSecret: String )( imp
   def register: Route =
     path( "user" / "register" ) {
       (post & entity( as[RegisterForm] )) { register =>
-        val hash = new AuthUtils.HmacSha256( jwtSecret ).apply( register.password )
-        complete( backend.registerUser( register.name, register.email, hash ) )
+        val hash   = new AuthUtils.HmacSha256( jwtSecret ).apply( register.password )
+        val result = backend.registerUser( register.name, register.email, hash )
+        onComplete( result ) {
+          case Success( _ ) => complete( ( StatusCodes.OK, "OK" ) )
+          case Failure( e ) =>
+            complete( ( StatusCodes.BadRequest, s"User already exist or an error occured : ${e.getMessage}" ) )
+        }
       }
     }
 

@@ -37,8 +37,20 @@ trait LinkDao { self: Queries with DbContext with TimerObserver with StreamingSu
   def createOrUpdateLink( link: model.Link ): Future[Unit] =
     observeDbTime( Metrics.putLinkLatency, upsertLink( link ) )
 
+  def linkExisting( link: model.Link ): Future[Option[Link]] =
+    observeDbTime(
+      Metrics.putLinkLatency,
+      getLinkFromModel( link ).result.headOption
+        .map( opt => opt.map( l => Link( l.id, l.url.getOrElse( "" ), List() ) ) )
+    )
+
   def createTag( tag: model.Tag ): Future[Int] =
     observeDbTime( Metrics.putTagLatency, tags.insertOrUpdate( DbTag( tag.id, tag.name.some ) ) )
+
+  def getLinkFromModel( link: Link ) =
+    for {
+      l <- links if l.url === link.url
+    } yield (l)
 
   def upsertLink( link: Link ): DmlIO[Unit] = {
     val dbLink = DbLink( 0, link.url.some )

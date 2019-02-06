@@ -114,7 +114,10 @@ class MainRoutes( val backend: KureuilDatabase )( implicit val ec: ExecutionCont
     } ~ authzPrefix( pathLinks, POST, Permission.Write )( id ) {
       pathEndOrSingleSlash {
         (post & entity( as[model.Link] )) { link =>
-          val result = backend.createOrUpdateLink( link )
+          val result = for {
+            exist  <- backend.linkExisting( link )
+            create <- backend.createOrUpdateLink( link ) if exist.isEmpty
+          } yield create
           onComplete( result ) {
             case Failure( e ) => complete( ( StatusCodes.BadRequest, e.getMessage ) )
             case Success( _ ) => complete( ( StatusCodes.Created, "Created" ) )
@@ -124,7 +127,11 @@ class MainRoutes( val backend: KureuilDatabase )( implicit val ec: ExecutionCont
     } ~ authzPrefix( pathLinks, PUT, Permission.Write )( id ) {
       pathEndOrSingleSlash {
         (put & entity( as[model.Link] )) { link =>
-          val result = backend.createOrUpdateLink( link )
+          val result = for {
+            exist  <- backend.linkExisting( link )
+            create <- backend.createOrUpdateLink( link.copy( id = exist.map( _.id ).getOrElse( 0 ) ) )
+            if exist.isDefined
+          } yield create
           onComplete( result ) {
             case Failure( e ) => complete( ( StatusCodes.BadRequest, e.getMessage ) )
             case Success( _ ) => complete( ( StatusCodes.OK, "Updated" ) )
