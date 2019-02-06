@@ -37,6 +37,8 @@ trait KureuilDatabase {
 
   def createOrUpdateLink( link: model.Link ): Future[Unit]
 
+  def linkExisting( link: model.Link ): Future[Option[model.Link]]
+
   def getLink( linkId: Long ): Future[model.Link]
 
   def deleteLink( linkId: Long ): Future[Unit]
