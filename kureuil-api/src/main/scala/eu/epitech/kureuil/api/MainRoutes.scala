@@ -50,7 +50,7 @@ class MainRoutes( val backend: KureuilDatabase )( implicit val ec: ExecutionCont
     } ~ authzPrefix( pathChannels, POST, Permission.Write )( id ) {
       pathEndOrSingleSlash {
         (post & entity( as[PostChannel] )) { channel =>
-          val result = backend.createOrUpdate( model.Channel( 0, channel.name, channel.query, List() ), id.id )
+          val result = backend.createChannel( model.Channel( 0, channel.name, channel.query, List() ), id.id )
           onComplete( result ) { done =>
             complete( done.map {
               case 0 => ( StatusCodes.BadRequest, "Failed" )
@@ -62,7 +62,10 @@ class MainRoutes( val backend: KureuilDatabase )( implicit val ec: ExecutionCont
     } ~ authzPrefix( pathChannels, PUT, Permission.Write )( id ) {
       pathEndOrSingleSlash {
         (put & entity( as[UpdateChannel] )) { channel =>
-          val result = backend.createOrUpdate( model.Channel( channel.id, channel.name, channel.query, List() ), id.id )
+          val result = for {
+            exist <- backend.channelExists( channel.id )
+            create <- backend.createChannel( model.Channel( channel.id, channel.name, channel.query, List() ), id.id ) if exist.isDefined
+          } yield create
           onComplete( result ) { done =>
             complete( done.map {
               case 0 => ( StatusCodes.BadRequest, "Failed" )

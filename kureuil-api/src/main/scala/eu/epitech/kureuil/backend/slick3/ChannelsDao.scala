@@ -13,7 +13,7 @@ import scala.collection.mutable.{Map => MutMap}
 import scala.collection.mutable.{Set => MutSet}
 import scala.concurrent.Future
 
-trait ChannelsDao { self: DbContext with TimerObserver with StreamingSupport with Tables =>
+trait ChannelsDao { self: Queries with DbContext with TimerObserver with StreamingSupport with Tables =>
 
   import profile.api._
 
@@ -22,21 +22,27 @@ trait ChannelsDao { self: DbContext with TimerObserver with StreamingSupport wit
   def getUserChannels( userEmail: String ): Future[List[Channel]] =
     observeDbTime( Metrics.getChannelsLatency, buildChannelsFor( userEmail ) )
 
-  def createOrUpdate( channel: Channel, userEmail: String ): Future[Int] =
+  def createChannel( channel: Channel, userEmail: String ): Future[Int] =
     observeDbTime(
       Metrics.putChannelsLatency,
       createOrUpdateChannel( channel, userEmail )
     )
 
   def createOrUpdateChannel( channel: Channel, userEmail: String ) = {
-    val insertQuery = channels returning channels.map( _.id ) into ( ( channel, id ) => channel.copy( id = id ) )
     val newChannel  = DbChannel( channel.id, channel.name, channel.query )
     for {
       user <- getUserByEmail( userEmail ).result.head
-      up   <- insertQuery.insertOrUpdate( newChannel )
-      ins  <- userChannels.insertOrUpdate( DbUserChannel( user.id, up.getOrElse( newChannel ).id, true, true ) )
+      up   <- getOrInsertChannel( newChannel )
+      ins  <- userChannels.insertOrUpdate( DbUserChannel( user.id, up.id, true, true ) )
     } yield ins
   }
+
+  def getOrInsertChannel = new GetOrInsert[Long, DbChannel, DbChannels](
+    channels,
+    _.id,
+    (v: DbChannel) => (r: DbChannels) => r.name === v.name,
+    ( v, k ) => v.copy( id = k )
+  )
 
   def getUserByEmail( userEmail: String ) =
     for {
@@ -51,6 +57,9 @@ trait ChannelsDao { self: DbContext with TimerObserver with StreamingSupport wit
       _ <- userChannels.filter( _.idChannel === id ).delete
       c <- channels.filter( _.id === id ).delete
     } yield c
+
+  def channelExists( id: Long ): Future[Option[model.Channel]] =
+    observeDbTime( Metrics.getChannelsLatency, channels.filter( _.id === id ).result.headOption.map( _.map( c => model.Channel( c.id, c.name, c.query, List() ) ) ) )
 
   def getUserChannels( ids: sc.Set[Long] ): Query[DbUserChannels, DbUserChannel, sc.Seq] =
     userChannels.filter( _.idChannel inSet ids )

@@ -21,7 +21,9 @@ trait KureuilDatabase {
 
   def getUserChannels( userEmail: String ): Future[List[model.Channel]]
 
-  def createOrUpdate( channel: Channel, userEmail: String ): Future[Int]
+  def createChannel( channel: Channel, userEmail: String ): Future[Int]
+
+  def channelExists( id: Long ): Future[Option[model.Channel]]
 
   def deleteChannel( id: Long ): Future[Int]
 
