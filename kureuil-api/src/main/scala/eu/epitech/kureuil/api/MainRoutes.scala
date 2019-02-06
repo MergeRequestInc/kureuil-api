@@ -77,7 +77,7 @@ class MainRoutes( val backend: KureuilDatabase )( implicit val ec: ExecutionCont
         onComplete( result ) { done =>
           complete( done.map {
             case 0 => ( StatusCodes.BadRequest, "Failed" )
-            case _ => ( StatusCodes.OK, "OK" )
+            case _ => ( StatusCodes.NoContent, "OK" )
           } )
         }
       }
@@ -114,27 +114,35 @@ class MainRoutes( val backend: KureuilDatabase )( implicit val ec: ExecutionCont
     } ~ authzPrefix( pathLinks, POST, Permission.Write )( id ) {
       pathEndOrSingleSlash {
         (post & entity( as[model.Link] )) { link =>
-          val result = for {
-            exist  <- backend.linkExisting( link )
-            create <- backend.createOrUpdateLink( link ) if exist.isEmpty
-          } yield create
-          onComplete( result ) {
-            case Failure( e ) => complete( ( StatusCodes.BadRequest, e.getMessage ) )
-            case Success( _ ) => complete( ( StatusCodes.Created, "Created" ) )
+          if (link.tags.isEmpty || link.tags.size > 5)
+            complete( ( StatusCodes.BadRequest, "You must provide at least 1 and at most 5 tags" ) )
+          else {
+            val result = for {
+              exist  <- backend.linkExisting( link )
+              create <- backend.createOrUpdateLink( link ) if exist.isEmpty
+            } yield create
+            onComplete( result ) {
+              case Failure( e ) => complete( ( StatusCodes.BadRequest, e.getMessage ) )
+              case Success( _ ) => complete( ( StatusCodes.Created, "Created" ) )
+            }
           }
         }
       }
     } ~ authzPrefix( pathLinks, PUT, Permission.Write )( id ) {
       pathEndOrSingleSlash {
         (put & entity( as[model.Link] )) { link =>
-          val result = for {
-            exist  <- backend.linkExisting( link )
-            create <- backend.createOrUpdateLink( link.copy( id = exist.map( _.id ).getOrElse( 0 ) ) )
-            if exist.isDefined
-          } yield create
-          onComplete( result ) {
-            case Failure( e ) => complete( ( StatusCodes.BadRequest, e.getMessage ) )
-            case Success( _ ) => complete( ( StatusCodes.OK, "Updated" ) )
+          if (link.tags.isEmpty || link.tags.size > 5)
+            complete( ( StatusCodes.BadRequest, "You must provide at least 1 and at most 5 tags" ) )
+          else {
+            val result = for {
+              exist  <- backend.linkExisting( link )
+              create <- backend.createOrUpdateLink( link.copy( id = exist.map( _.id ).getOrElse( 0 ) ) )
+              if exist.isDefined
+            } yield create
+            onComplete( result ) {
+              case Failure( e ) => complete( ( StatusCodes.BadRequest, e.getMessage ) )
+              case Success( _ ) => complete( ( StatusCodes.OK, "Updated" ) )
+            }
           }
         }
       }
@@ -143,7 +151,7 @@ class MainRoutes( val backend: KureuilDatabase )( implicit val ec: ExecutionCont
         val result = backend.deleteLink( linkId )
         onComplete( result ) {
           case Failure( e ) => complete( ( StatusCodes.BadRequest, e.getMessage ) )
-          case Success( _ ) => complete( ( StatusCodes.OK, "Deleted" ) )
+          case Success( _ ) => complete( StatusCodes.NoContent )
         }
       }
     }
