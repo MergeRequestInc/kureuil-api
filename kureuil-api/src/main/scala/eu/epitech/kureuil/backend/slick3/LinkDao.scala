@@ -59,10 +59,10 @@ trait LinkDao { self: Queries with DbContext with TimerObserver with StreamingSu
     }
     for {
       l <- getOrInsertLink( dbLink )
-      _ <- linkTags.filter( _.idLink === l.id ).delete
       t <- DmlIO.sequence( dbTags.map { dbTag =>
             insertDbTag( l.id )( dbTag )
           } )
+      _ <- linkTags.filter( _.idLink === l.id ).delete
       _ <- linkTags ++= t
     } yield ()
   }
