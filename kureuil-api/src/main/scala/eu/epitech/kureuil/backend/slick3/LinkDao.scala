@@ -49,13 +49,13 @@ trait LinkDao { self: Queries with DbContext with TimerObserver with StreamingSu
 
   def getLinkFromModel( link: Link ) =
     for {
-      l <- links if l.url === link.url
+      l <- links if l.id === link.id
     } yield (l)
 
   def upsertLink( link: Link ): DmlIO[Unit] = {
-    val dbLink = DbLink( 0, link.url.some )
+    val dbLink = DbLink( link.id, link.url.some )
     val dbTags = link.tags.map { tag =>
-      DbTag( 0, tag.name.some )
+      DbTag( tag.id, tag.name.some )
     }
     for {
       l <- getOrInsertLink( dbLink )
@@ -73,18 +73,22 @@ trait LinkDao { self: Queries with DbContext with TimerObserver with StreamingSu
     } yield DbLinkTag( linkId, t.id )
   }
 
-  def getOrInsertLink = new GetOrInsert[Long, DbLink, DbLinks](
+  def getOrInsertLink = new UpdateOrInsert[Long, String, DbLink, DbLinks](
     links,
     _.id,
-    (v: DbLink) => (r: DbLinks) => r.url.getOrElse( "a" ) === v.url.getOrElse( "b" ),
-    ( v, k ) => v.copy( id = k )
+    (v: DbLink) => (r: DbLinks) => r.id === v.id,
+    ( v, k ) => v.copy( id = k ),
+    _.url.getOrElse( "" ),
+    _.url.getOrElse( "" )
   )
 
-  def getOrInsertTag = new GetOrInsert[Long, DbTag, DbTags](
+  def getOrInsertTag = new UpdateOrInsert[Long, String, DbTag, DbTags](
     tags,
     _.id,
-    (v: DbTag) => (r: DbTags) => r.name.getOrElse( "a" ) === v.name.getOrElse( "b" ),
-    ( v, k ) => v.copy( id = k )
+    (v: DbTag) => (r: DbTags) => r.id === v.id || r.name.getOrElse( "a" ) === v.name.getOrElse( "b" ),
+    ( v, k ) => v.copy( id = k ),
+    _.name.getOrElse( "" ),
+    _.name.getOrElse( "" )
   )
 
   def queryTagsByLinkId( id: Long ) =

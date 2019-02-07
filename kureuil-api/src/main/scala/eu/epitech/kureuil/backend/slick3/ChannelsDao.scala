@@ -29,19 +29,31 @@ trait ChannelsDao { self: Queries with DbContext with TimerObserver with Streami
     )
 
   def createOrUpdateChannel( channel: Channel, userEmail: String ) = {
-    val newChannel  = DbChannel( channel.id, channel.name, channel.query )
+    val newChannel = DbChannel( channel.id, channel.name, channel.query )
     for {
-      user <- getUserByEmail( userEmail ).result.head
-      up   <- getOrInsertChannel( newChannel )
-      ins  <- userChannels.insertOrUpdate( DbUserChannel( user.id, up.id, true, true ) )
+      user    <- getUserByEmail( userEmail ).result.head
+      up      <- updateOrInsertChannelName( newChannel )
+      updated <- updateOrInsertChannelQuery( up.copy( query = channel.query ) )
+      ins     <- userChannels.insertOrUpdate( DbUserChannel( user.id, updated.id, true, true ) )
     } yield ins
   }
 
-  def getOrInsertChannel = new GetOrInsert[Long, DbChannel, DbChannels](
+  def updateOrInsertChannelName = new UpdateOrInsert[Long, String, DbChannel, DbChannels](
     channels,
     _.id,
-    (v: DbChannel) => (r: DbChannels) => r.name === v.name,
-    ( v, k ) => v.copy( id = k )
+    (v: DbChannel) => (r: DbChannels) => r.id === v.id,
+    ( v, k ) => v.copy( id = k ),
+    _.name,
+    _.name
+  )
+
+  def updateOrInsertChannelQuery = new UpdateOrInsert[Long, String, DbChannel, DbChannels](
+    channels,
+    _.id,
+    (v: DbChannel) => (r: DbChannels) => r.id === v.id,
+    ( v, k ) => v.copy( id = k ),
+    _.query,
+    _.query
   )
 
   def getUserByEmail( userEmail: String ) =
@@ -59,7 +71,14 @@ trait ChannelsDao { self: Queries with DbContext with TimerObserver with Streami
     } yield c
 
   def channelExists( id: Long ): Future[Option[model.Channel]] =
-    observeDbTime( Metrics.getChannelsLatency, channels.filter( _.id === id ).result.headOption.map( _.map( c => model.Channel( c.id, c.name, c.query, List() ) ) ) )
+    observeDbTime(
+      Metrics.getChannelsLatency,
+      channels
+        .filter( _.id === id )
+        .result
+        .headOption
+        .map( _.map( c => model.Channel( c.id, c.name, c.query, List() ) ) )
+    )
 
   def getUserChannels( ids: sc.Set[Long] ): Query[DbUserChannels, DbUserChannel, sc.Seq] =
     userChannels.filter( _.idChannel inSet ids )

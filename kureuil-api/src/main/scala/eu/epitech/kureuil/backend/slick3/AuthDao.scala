@@ -26,7 +26,11 @@ trait AuthDao { self: DbContext with Tables =>
 
   def registerUser( name: String, email: String, hash: String ): Future[Boolean] = runTx {
     for {
-      u <- users ++= Seq( DbUser( 0, name, email, hash ) )
+      exist <- users
+                .filter( p => p.email === email )
+                .result
+                .headOption
+      u <- users ++= Seq( DbUser( 0, name, email, hash ) ) if exist.isEmpty
     } yield u.isDefined
   }
 
