@@ -51,11 +51,9 @@ class MainRoutes( val backend: KureuilDatabase )( implicit val ec: ExecutionCont
       pathEndOrSingleSlash {
         (post & entity( as[PostChannel] )) { channel =>
           val result = backend.createChannel( model.Channel( 0, channel.name, channel.query, List() ), id.id )
-          onComplete( result ) { done =>
-            complete( done.map {
-              case 0 => ( StatusCodes.BadRequest, "Failed" )
-              case _ => ( StatusCodes.Created, "Created" )
-            } )
+          onComplete( result ) {
+            case Failure( e ) => complete ( ( StatusCodes.BadRequest, s"Failed with reason : ${e.getMessage}" ) )
+            case Success( _ ) => complete ( StatusCodes.Created )
           }
         }
       }
@@ -63,11 +61,9 @@ class MainRoutes( val backend: KureuilDatabase )( implicit val ec: ExecutionCont
       pathEndOrSingleSlash {
         (put & entity( as[UpdateChannel] )) { channel =>
           val result = backend.createChannel( model.Channel( channel.id, channel.name, channel.query, List() ), id.id )
-          onComplete( result ) { done =>
-            complete( done.map {
-              case 0 => ( StatusCodes.BadRequest, "Failed" )
-              case _ => ( StatusCodes.OK, "Updated" )
-            } )
+          onComplete( result ) {
+            case Failure( e ) => complete ( ( StatusCodes.BadRequest, s"Failed with reason : ${e.getMessage}" ) )
+            case Success( _ ) => complete ( StatusCodes.OK )
           }
         }
       }
@@ -76,8 +72,8 @@ class MainRoutes( val backend: KureuilDatabase )( implicit val ec: ExecutionCont
         val result = backend.deleteChannel( id )
         onComplete( result ) { done =>
           complete( done.map {
-            case 0 => ( StatusCodes.BadRequest, "Failed" )
-            case _ => ( StatusCodes.NoContent, "OK" )
+            case 0 => StatusCodes.BadRequest
+            case _ => StatusCodes.NoContent
           } )
         }
       }
@@ -94,11 +90,9 @@ class MainRoutes( val backend: KureuilDatabase )( implicit val ec: ExecutionCont
       pathEndOrSingleSlash {
         (post & entity( as[model.Tag] )) { tag =>
           val result = backend.createTag( tag )
-          onComplete( result ) { done =>
-            complete( done.map {
-              case 0 => ( StatusCodes.BadRequest, "Failed" )
-              case _ => ( StatusCodes.Created, "Created or Updated" )
-            } )
+          onComplete( result ) {
+            case Failure( e ) => complete ( ( StatusCodes.BadRequest, s"Failed with reason : ${e.getMessage}" ) )
+            case Success( _ ) => complete ( StatusCodes.Created )
           }
         }
       }
