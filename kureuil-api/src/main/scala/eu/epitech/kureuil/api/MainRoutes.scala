@@ -52,18 +52,25 @@ class MainRoutes( val backend: KureuilDatabase )( implicit val ec: ExecutionCont
         (post & entity( as[PostChannel] )) { channel =>
           val result = backend.createChannel( model.Channel( 0, channel.name, channel.query, List() ), id.id )
           onComplete( result ) {
-            case Failure( e ) => complete ( ( StatusCodes.BadRequest, s"Failed with reason : ${e.getMessage}" ) )
-            case Success( _ ) => complete ( StatusCodes.Created )
+            case Failure( e ) => complete( ( StatusCodes.BadRequest, s"Failed with reason : ${e.getMessage}" ) )
+            case Success( _ ) => complete( ( StatusCodes.Created, "Created" ) )
           }
         }
       }
     } ~ authzPrefix( pathChannels, PUT, Permission.Write )( id ) {
       pathEndOrSingleSlash {
         (put & entity( as[UpdateChannel] )) { channel =>
-          val result = backend.createChannel( model.Channel( channel.id, channel.name, channel.query, List() ), id.id )
-          onComplete( result ) {
-            case Failure( e ) => complete ( ( StatusCodes.BadRequest, s"Failed with reason : ${e.getMessage}" ) )
-            case Success( _ ) => complete ( StatusCodes.OK )
+          val check = backend.channelExists( channel.id )
+          onComplete( check ) {
+            case Failure( e ) => complete( ( StatusCodes.BadRequest, s"Failed with reason : ${e.getMessage}" ) )
+            case Success( a ) if a.isDefined =>
+              val result =
+                backend.createChannel( model.Channel( channel.id, channel.name, channel.query, List() ), id.id )
+              onComplete( result ) {
+                case Failure( e ) => complete( ( StatusCodes.BadRequest, s"Failed with reason : ${e.getMessage}" ) )
+                case Success( _ ) => complete( ( StatusCodes.OK, "Updated" ) )
+              }
+            case _ => complete( StatusCodes.NotFound )
           }
         }
       }
@@ -91,8 +98,8 @@ class MainRoutes( val backend: KureuilDatabase )( implicit val ec: ExecutionCont
         (post & entity( as[model.Tag] )) { tag =>
           val result = backend.createTag( tag )
           onComplete( result ) {
-            case Failure( e ) => complete ( ( StatusCodes.BadRequest, s"Failed with reason : ${e.getMessage}" ) )
-            case Success( _ ) => complete ( StatusCodes.Created )
+            case Failure( e ) => complete( ( StatusCodes.BadRequest, s"Failed with reason : ${e.getMessage}" ) )
+            case Success( _ ) => complete( StatusCodes.Created )
           }
         }
       }
