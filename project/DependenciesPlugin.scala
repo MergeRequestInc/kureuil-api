@@ -45,7 +45,7 @@ object DependenciesPlugin extends AutoPlugin {
     val circeVersion = "0.10.0"
     val circe: Deps =
       group( "io.circe", circeVersion )( "circe-core", "circe-generic", "circe-parser" )()
-    val circeOptics = Seq( "io.circe" %% "circe-optics" % circeVersion )
+    val circeOptics: Deps = Seq( "io.circe" %% "circe-optics" % circeVersion )
 
     val akkaVersion           = "2.5.17"
     val akkaHttpVersion       = "10.1.5"
@@ -56,10 +56,10 @@ object DependenciesPlugin extends AutoPlugin {
         group( "com.typesafe.akka", akkaHttpVersion )( "akka-http" )( "akka-http-testkit" ) ++
         Seq( "de.heikoseeberger" %% "akka-http-circe" % "1.22.0" )
 
-    val jsonWebToken = Seq( "io.igl" %% "jwt" % "1.2.2" )
+    val jsonWebToken: Deps = Seq( "io.igl" %% "jwt" % "1.2.2" )
 
-    val sslConfigCore   = Seq( "com.typesafe"        %% "ssl-config-core" % "0.2.2" )
-    val reactiveStreams = Seq( "org.reactivestreams" % "reactive-streams" % "1.0.2" )
+    val sslConfigCore: Deps   = Seq( "com.typesafe"        %% "ssl-config-core" % "0.2.2" )
+    val reactiveStreams: Deps = Seq( "org.reactivestreams" % "reactive-streams" % "1.0.2" )
 
     val enumeratum: Deps =
       Seq( "com.beachape" %% "enumeratum" % "1.5.13", "com.beachape" %% "enumeratum-circe" % "1.5.18" )
@@ -81,10 +81,6 @@ object DependenciesPlugin extends AutoPlugin {
       Seq( "com.github.pureconfig" %% "pureconfig-enumeratum" % pureconfigVersion )
 
     val decline: Deps = Seq( "com.monovore" %% "decline" % "0.5.1" )
-
-    val doobieVersion = "0.6.0-RC1"
-    val doobie =
-      depsGroup( "org.tpolecat", doobieVersion )( "doobie-core", "doobie-postgres" )( "doobie-h2", "doobie-scalatest" )
 
     val slickVersion       = "3.2.3"
     val slick: Deps        = group( "com.typesafe.slick", slickVersion )( "slick", "slick-hikaricp" )()
@@ -109,17 +105,19 @@ object DependenciesPlugin extends AutoPlugin {
       )
     val scalacheck: Deps = scalacheckMain % "test"
 
-    val prometheus = Seq( "org.lyranthe.prometheus" %% "client" % "0.9.0-M5" )
+    val prometheus: Deps = Seq( "org.lyranthe.prometheus" %% "client" % "0.9.0-M5" )
 
-    val kamon = Seq(
+    val kamon: Deps = Seq(
       "io.kamon" %% "kamon-core"          % "1.1.3",
       "io.kamon" %% "kamon-akka-2.5"      % "1.1.2",
       "io.kamon" %% "kamon-akka-http-2.5" % "1.1.1",
       "io.kamon" %% "kamon-prometheus"    % "1.1.1"
     )
 
-    // kamon & doobie introduce version conflict of these
-    val lihaoyi = Seq( "com.lihaoyi" %% "sourcecode" % "0.1.4", "com.lihaoyi" %% "fansi" % "0.2.5" )
+    val atto: Deps = Seq(
+      "org.tpolecat" %% "atto-core"    % "0.6.5",
+      "org.tpolecat" %% "atto-refined" % "0.6.5"
+    )
   }
 
   import autoImport._
@@ -155,8 +153,7 @@ object DependenciesPlugin extends AutoPlugin {
       scalatest ++
       scalacheck ++
       prometheus ++
-      kamon ++
-      lihaoyi
+      kamon
 
   class GroupOps( val self: Seq[ModuleID] ) extends AnyVal {
     def exclude( org: String, name: String ): Seq[ModuleID] =

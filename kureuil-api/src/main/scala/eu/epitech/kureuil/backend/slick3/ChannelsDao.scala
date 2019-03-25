@@ -13,11 +13,12 @@ import scala.collection.mutable.{Map => MutMap}
 import scala.collection.mutable.{Set => MutSet}
 import scala.concurrent.Future
 
-trait ChannelsDao { self: Queries with DbContext with TimerObserver with StreamingSupport with Tables =>
+trait ChannelsDao {
+  self: Queries with DbContext with TimerObserver with StreamingSupport with Tables with ChannelsQueries =>
 
   import profile.api._
 
-  def getChannels: Future[List[Channel]] = observeDbTime( Metrics.getChannelsLatency, getAllChannels() )
+  def getChannels: Future[List[Channel]] = observeDbTime( Metrics.getChannelsLatency, getAllChannels )
 
   def getUserChannels( userEmail: String ): Future[List[Channel]] =
     observeDbTime( Metrics.getChannelsLatency, buildChannelsFor( userEmail ) )
@@ -28,47 +29,18 @@ trait ChannelsDao { self: Queries with DbContext with TimerObserver with Streami
       createOrUpdateChannel( channel, userEmail )
     )
 
-  def createOrUpdateChannel( channel: Channel, userEmail: String ) = {
+  def createOrUpdateChannel( channel: Channel, userEmail: String ): DmlIO[Int] = {
     val newChannel = DbChannel( channel.id, channel.name, channel.query )
     for {
       user    <- getUserByEmail( userEmail ).result.head
       up      <- updateOrInsertChannelName( newChannel )
       updated <- updateOrInsertChannelQuery( up.copy( query = channel.query ) )
-      ins     <- userChannels.insertOrUpdate( DbUserChannel( user.id, updated.id, true, true ) )
+      ins     <- userChannels.insertOrUpdate( DbUserChannel( user.id, updated.id, isAdmin = true, isSubscribed = true ) )
     } yield ins
   }
 
-  def updateOrInsertChannelName = new UpdateOrInsert[Long, String, DbChannel, DbChannels](
-    channels,
-    _.id,
-    (v: DbChannel) => (r: DbChannels) => r.id === v.id,
-    ( v, k ) => v.copy( id = k ),
-    _.name,
-    _.name
-  )
-
-  def updateOrInsertChannelQuery = new UpdateOrInsert[Long, String, DbChannel, DbChannels](
-    channels,
-    _.id,
-    (v: DbChannel) => (r: DbChannels) => r.id === v.id,
-    ( v, k ) => v.copy( id = k ),
-    _.query,
-    _.query
-  )
-
-  def getUserByEmail( userEmail: String ) =
-    for {
-      u <- users if u.email === userEmail
-    } yield u
-
   def deleteChannel( id: Long ): Future[Int] =
     observeDbTime( Metrics.deleteChannelLatency, queryDeleteChannel( id ) )
-
-  def queryDeleteChannel( id: Long ) =
-    for {
-      _ <- userChannels.filter( _.idChannel === id ).delete
-      c <- channels.filter( _.id === id ).delete
-    } yield c
 
   def channelExists( id: Long ): Future[Option[model.Channel]] =
     observeDbTime(
@@ -80,17 +52,7 @@ trait ChannelsDao { self: Queries with DbContext with TimerObserver with Streami
         .map( _.map( c => model.Channel( c.id, c.name, c.query, List() ) ) )
     )
 
-  def getUserChannels( ids: sc.Set[Long] ): Query[DbUserChannels, DbUserChannel, sc.Seq] =
-    userChannels.filter( _.idChannel inSet ids )
-
-  def queryChannelsFor( userEmail: String ) =
-    for {
-      u  <- users if u.email === userEmail
-      uc <- userChannels if uc.idUser === u.id
-      c  <- channels if c.id === uc.idChannel
-    } yield c
-
-  def getAllChannels(): DmlIO[List[Channel]] =
+  def getAllChannels: DmlIO[List[Channel]] =
     for {
       channels <- foldStream( channels.result, new ChannelBuilder() )
       channelsIds = channels.channelsIds

@@ -93,7 +93,8 @@ val `kureuil-api` = project
         jose4j ++
         prometheus ++
         kamon ++
-        jsonWebToken
+        jsonWebToken ++
+        atto
   )
   .settings( mainClass := Some( "eu.epitech.kureuil.Main" ) )
   .settings( Db.slickBindingsPath := sourceDirectory.value / "gen" / "scala",

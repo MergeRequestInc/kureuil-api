@@ -14,7 +14,7 @@ import scala.collection.mutable.{Map => MutMap}
 import scala.collection.mutable.{Set => MutSet}
 import scala.concurrent.Future
 
-trait LinkDao { self: Queries with DbContext with TimerObserver with StreamingSupport with Tables =>
+trait LinkDao { self: Queries with DbContext with TimerObserver with StreamingSupport with Tables with LinkQueries =>
 
   import profile.api._
 
@@ -26,13 +26,6 @@ trait LinkDao { self: Queries with DbContext with TimerObserver with StreamingSu
   def getAllLinks: Future[List[Link]] = observeDbTime( Metrics.getLinksLatency, buildAllLinks )
 
   def deleteLink( linkId: Long ): Future[Unit] = observeDbTime( Metrics.deleteLinkLatency, deleteLinkById( linkId ) )
-
-  def deleteLinkById( linkId: Long ): DmlIO[Unit] = {
-    for {
-      _ <- linkTags.filter( _.idLink === linkId ).delete
-      _ <- links.filter( _.id === linkId ).delete
-    } yield ()
-  }
 
   def createOrUpdateLink( link: model.Link ): Future[Unit] =
     observeDbTime( Metrics.putLinkLatency, upsertLink( link ) )
@@ -47,71 +40,12 @@ trait LinkDao { self: Queries with DbContext with TimerObserver with StreamingSu
   def createTag( tag: model.Tag ): Future[Int] =
     observeDbTime( Metrics.putTagLatency, tags.insertOrUpdate( DbTag( tag.id, tag.name.some ) ) )
 
-  def getLinkFromModel( link: Link ) =
-    for {
-      l <- links if l.id === link.id
-    } yield (l)
-
-  def upsertLink( link: Link ): DmlIO[Unit] = {
-    val dbLink = DbLink( link.id, link.url.some )
-    val dbTags = link.tags.map { tag =>
-      DbTag( tag.id, tag.name.some )
-    }
-    for {
-      l <- getOrInsertLink( dbLink )
-      t <- DmlIO.sequence( dbTags.map { dbTag =>
-            insertDbTag( l.id )( dbTag )
-          } )
-      _ <- linkTags.filter( _.idLink === l.id ).delete
-      _ <- linkTags ++= t
-    } yield ()
-  }
-
-  def insertDbTag( linkId: Long )( tag: DbTag ) = {
-    for {
-      t <- getOrInsertTag( tag )
-    } yield DbLinkTag( linkId, t.id )
-  }
-
-  def getOrInsertLink = new UpdateOrInsert[Long, String, DbLink, DbLinks](
-    links,
-    _.id,
-    (v: DbLink) => (r: DbLinks) => r.id === v.id,
-    ( v, k ) => v.copy( id = k ),
-    _.url.getOrElse( "" ),
-    _.url.getOrElse( "" )
-  )
-
-  def getOrInsertTag = new UpdateOrInsert[Long, String, DbTag, DbTags](
-    tags,
-    _.id,
-    (v: DbTag) => (r: DbTags) => r.id === v.id || r.name.getOrElse( "a" ) === v.name.getOrElse( "b" ),
-    ( v, k ) => v.copy( id = k ),
-    _.name.getOrElse( "" ),
-    _.name.getOrElse( "" )
-  )
-
-  def queryTagsByLinkId( id: Long ) =
-    for {
-      l <- linkTags if l.idLink === id
-      t <- tags if t.id === l.idTag
-    } yield t
-
   def toTag: scala.Seq[DbTag] => List[model.Tag] =
     list => list.map( t => model.Tag( t.id, t.name.getOrElse( "" ) ) ).toList
 
   def getTagsByLinkId( id: Long ): Future[List[model.Tag]] =
     observeDbTime( Metrics.getTagByLinkIdLatency, queryTagsByLinkId( id ).result.map( toTag ) )
   def getAllTags: Future[List[model.Tag]] = observeDbTime( Metrics.getTagsLatency, tags.result.map( toTag ) )
-
-  def getLinksByChannel( channelId: Long ) =
-    links
-
-  def getLinkTags( ids: sc.Set[Long] ) =
-    linkTags.filter( _.idLink inSet ids )
-
-  def getTags( ids: sc.Set[Long] ) =
-    tags.filter( _.id inSet ids )
 
   def getAllLinks( channelId: Long ): DmlIO[List[Link]] =
     for {
