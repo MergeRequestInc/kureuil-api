@@ -1,0 +1,18 @@
+version: '1'
+
+services:
+	kureuil-api:
+		image:
+		container_name: api
+	kureuil-web:
+		image:
+		container_name: web
+	kureuil:
+		image:
+		container_name: kureuil
+		depends_on:
+			- kureuil-api
+			- kureuil-web
+		environnement:
+		ports:
+			- '${PORT}:'
