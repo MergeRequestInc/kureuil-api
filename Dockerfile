@@ -1,7 +1,7 @@
 # K.U.R.E.U.I.L
 #
 #
-# version: '1'
+# version: '3'
 
 FROM ubuntu:16.04
 
@@ -28,7 +28,8 @@ EXPOSE 4220
 
 #install kureuil-api
 RUN (cd /kureuil-api && sbt compile)
+RUN (service postgresql start)
 RUN (cd /kureuil-api && sh psqlConfigScript.sh)
 
 # start kureuil-api
-CMD (cd /kureuil-api/ && sbt kureuil-api-run/run)
+#CMD (cd /kureuil-api/ && sbt kureuil-api-run/run)
