@@ -1,14 +1,16 @@
 version: '3'
 
 services:
-        project-kureuil-web:
-                image: kureuil-web
-                container_name: project-kureuil-web
-        kureuil:
-                build:
-                     context: .
-                container_name: kureuil-api
-                depends_on:
-                        - project-kureuil-web
-                ports:
-                        - '8000:8000'
+    project-kureuil-db:
+        image: kureuil-db
+        container_name: project-kureuil-db
+    project-kureuil-web:
+        image: kureuil-web
+        container_name: project-kureuil-web
+    project-kureuil-api:
+        build:
+            context: .
+        container_name: project-kureuil-api
+        depends_on:
+            - project-kureuil-web
+            - project-kureuil-db
