@@ -18,8 +18,8 @@ trait LinkDao { self: Queries with DbContext with TimerObserver with StreamingSu
 
   import profile.api._
 
-  def getLinks( channelId: Long ): Future[List[Link]] =
-    observeDbTime( Metrics.getLinksLatency, getAllLinks( channelId ) )
+  def getLinks( channelQuery: String ): Future[List[Link]] =
+    observeDbTime( Metrics.getLinksLatency, getAllLinks( channelQuery ) )
 
   def getLink( linkId: Long ): Future[Link] = observeDbTime( Metrics.getLinksLatency, getLinksById( linkId ) )
 
@@ -47,9 +47,9 @@ trait LinkDao { self: Queries with DbContext with TimerObserver with StreamingSu
     observeDbTime( Metrics.getTagByLinkIdLatency, queryTagsByLinkId( id ).result.map( toTag ) )
   def getAllTags: Future[List[model.Tag]] = observeDbTime( Metrics.getTagsLatency, tags.result.map( toTag ) )
 
-  def getAllLinks( channelId: Long ): DmlIO[List[Link]] =
+  def getAllLinks( channelQuery: String ): DmlIO[List[Link]] =
     for {
-      linksBuilder <- foldStream( getLinksByChannel( channelId ).result, new LinkBuilder() )
+      linksBuilder <- foldStream( links.result, new LinkBuilder( channelQuery.some ) )
       linksIds = linksBuilder.linksIds
       withLinkTag <- foldStream( getLinkTags( linksIds ).result, linksBuilder )
       tagsIds = withLinkTag.tagsIds
@@ -58,7 +58,7 @@ trait LinkDao { self: Queries with DbContext with TimerObserver with StreamingSu
 
   def buildAllLinks: DmlIO[List[Link]] =
     for {
-      linksBuilder <- foldStream( links.result, new LinkBuilder() )
+      linksBuilder <- foldStream( links.result, new LinkBuilder( none ) )
       linksIds = linksBuilder.linksIds
       withLinkTag <- foldStream( getLinkTags( linksIds ).result, linksBuilder )
       tagsIds = withLinkTag.tagsIds
@@ -67,14 +67,15 @@ trait LinkDao { self: Queries with DbContext with TimerObserver with StreamingSu
 
   def getLinksById( linkId: Long ): DmlIO[Link] =
     for {
-      linksBuilder <- foldStream( links.filter( _.id === linkId ).result, new LinkBuilder() )
+      linksBuilder <- foldStream( links.filter( _.id === linkId ).result, new LinkBuilder( none ) )
       linksIds = linksBuilder.linksIds
       withLinkTag <- foldStream( getLinkTags( linksIds ).result, linksBuilder )
       tagsIds = withLinkTag.tagsIds
       withTags <- foldStream( getTags( tagsIds ).result, withLinkTag )
     } yield withTags.build.head
 
-  private[this] class LinkBuilder() extends CasesBuilder[DbLink :+: DbLinkTag :+: DbTag :+: CNil, List[Link]] {
+  private[this] class LinkBuilder( channelQuery: Option[String] )
+      extends CasesBuilder[DbLink :+: DbLinkTag :+: DbTag :+: CNil, List[Link]] {
     private val linkById: MutMap[Long, DbLink]           = MutMap()
     private val tagsIdByLink: MutMap[Long, MutSet[Long]] = MutMap()
     private val tagsById: MutMap[Long, DbTag]            = MutMap()
@@ -92,9 +93,23 @@ trait LinkDao { self: Queries with DbContext with TimerObserver with StreamingSu
         Link( id, link.url.getOrElse( "" ), getTagsForLink( id ) )
     }
 
+    def filterByQuery( links: List[Link], str: String ): List[Link] = {
+      Parser.parseBnf( str ).fold( links ) { expr =>
+        links.filter { link =>
+          val parsedTags = link.tags.map { tag =>
+            Parser.isMandatoryOrAbsent( expr, tag.name )
+          }
+          parsedTags.exists( _.isDefined )
+        }
+      }
+    }
+
     override def build: List[Link] = {
       Metrics.streamingLatency.labelValues( "channeloverview" ).observeDuration( timer )
-      linkById.toMap.map( toLink ).toList
+      val fullList = linkById.toMap.map( toLink ).toList
+      channelQuery.fold( fullList ) { query =>
+        filterByQuery( fullList, query )
+      }
     }
 
     object append extends Poly1 {

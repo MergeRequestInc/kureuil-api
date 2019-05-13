@@ -48,5 +48,19 @@ class ParserSpec extends WordSpec with Matchers {
           }
       }
     }
+
+    "have correct mandatory tag" in {
+      val parsed = Parser.parseBnf( query )
+      parsed.fold( fail( "Cannot parse expression from query string" ) ) { expr =>
+        val notFoundTag = Parser.isMandatoryOrAbsent( expr, "cpp20" )
+        val parentTag   = Parser.isMandatoryOrAbsent( expr, tag1 )
+        val cpp11Tag    = Parser.isMandatoryOrAbsent( expr, tag2 )
+        val cpp14Tag    = Parser.isMandatoryOrAbsent( expr, tag3 )
+        notFoundTag shouldBe empty
+        parentTag shouldBe defined
+        cpp11Tag shouldBe defined
+        cpp14Tag shouldBe defined
+      }
+    }
   }
 }

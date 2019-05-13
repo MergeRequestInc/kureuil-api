@@ -69,9 +69,6 @@ trait LinkQueries { self: Queries with DbContext with TimerObserver with Streami
       t <- tags if t.id === l.idTag
     } yield t
 
-  def getLinksByChannel( channelId: Long ) =
-    links
-
   def getLinkTags( ids: sc.Set[Long] ) =
     linkTags.filter( _.idLink inSet ids )
 

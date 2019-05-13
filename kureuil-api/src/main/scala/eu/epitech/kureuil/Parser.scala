@@ -36,7 +36,7 @@ object Parser {
       .map( _.mkString ) <~ opt( spaceChar | whitespace )
 
   val logical_operator: Parser[LogicalOperator] =
-    (string( "or" ) | string( "and" )).map( LogicalOperator.withName ) <~ (spaceChar | whitespace)
+    (string( "or" ) | string( "and" )).map( LogicalOperator.withName ) <~ opt( spaceChar | whitespace )
 
   val additional_word: Parser[( LogicalOperator, SearchWord )] =
     logical_operator ~ word.map( SearchWord( _, None ) )
@@ -68,4 +68,46 @@ object Parser {
         first,
         others
       )
+
+  def parseBnf( bnf: String ): Option[Expr] = {
+    expr
+      .parseOnly( bnf )
+      .option
+  }
+
+  /*
+   * This method return an Option of a bool as follow :
+   * None = this tag is not present inside the bnf
+   * Some(false) = this tag is present but is not mandatory
+   * Some(true) = this tag is present and is mandatory
+   */
+  def isMandatoryOrAbsent( expr: Expr, tag: String ): Option[Boolean] = {
+    isMandatoryOrAbsent( expr, tag, andOr = true )
+  }
+
+  def isMandatoryOrAbsent( expr: Expr, tag: String, andOr: Boolean ): Option[Boolean] = {
+    expr match {
+      case Expr( searchTag, _ ) if isMandatoryOrAbsent( searchTag, tag, andOr ).isDefined =>
+        isMandatoryOrAbsent( searchTag, tag, andOr )
+      case Expr( _, Some( ( lo, ex ) ) ) if lo == LogicalOperator.And => isMandatoryOrAbsent( ex, tag, true )
+      case Expr( _, Some( ( lo, ex ) ) ) if lo == LogicalOperator.Or  => isMandatoryOrAbsent( ex, tag, false )
+      case _                                                          => None
+    }
+  }
+
+  def isMandatoryOrAbsent( word: SearchWord, tag: String, andOr: Boolean ): Option[Boolean] = {
+    word match {
+      case Parser.SearchWord( w, _ ) if w.equals( tag ) => andOr.some
+      case Parser.SearchWord( _, Some( ( lo, w ) ) )    => isMandatoryOrAbsent( w, tag, lo == LogicalOperator.And )
+      case _                                            => None
+    }
+  }
+
+  def isMandatoryOrAbsent( searchTag: SearchTag, tag: String, andOr: Boolean ): Option[Boolean] = {
+    searchTag match {
+      case SearchTag( w, _ ) if w.equals( tag ) => andOr.some
+      case SearchTag( _, Some( w ) )            => isMandatoryOrAbsent( w, tag, andOr = true )
+      case _                                    => None
+    }
+  }
 }

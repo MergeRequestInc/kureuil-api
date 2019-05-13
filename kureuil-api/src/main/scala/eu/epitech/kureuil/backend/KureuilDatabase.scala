@@ -33,7 +33,7 @@ trait KureuilDatabase {
 
   def getAllTags: Future[List[model.Tag]]
 
-  def getLinks( channelId: Long ): Future[List[model.Link]]
+  def getLinks( channelQuery: String ): Future[List[model.Link]]
 
   def getAllLinks: Future[List[model.Link]]
 
