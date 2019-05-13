@@ -47,14 +47,19 @@ object Parser {
       add <- opt( additional_word )
     } yield SearchWord( wo, add )
 
+  val search_word_paren: Parser[SearchWord] =
+    for {
+      _  <- char( '(' )
+      sw <- search_word_parser
+      _  <- char( ')' )
+    } yield sw
+
   val search_tag: Parser[SearchTag] =
     for {
       _  <- char( '#' )
       w  <- word
-      _  <- char( '(' )
-      sw <- search_word_parser
-      _  <- char( ')' )
-    } yield SearchTag( w, sw.some )
+      sw <- opt( search_word_paren )
+    } yield SearchTag( w, sw )
 
   val additional_expr: Parser[( LogicalOperator, Expr )] =
     logical_operator ~ (search_tag | word.map( SearchTag( _, None ) )).map( Expr( _, None ) )
