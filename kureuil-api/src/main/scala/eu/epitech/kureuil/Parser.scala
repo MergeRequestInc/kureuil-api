@@ -36,7 +36,7 @@ object Parser {
       .map( _.mkString ) <~ opt( spaceChar | whitespace )
 
   val logical_operator: Parser[LogicalOperator] =
-    (string( "or" ) | string( "and" )).map( LogicalOperator.withName ) <~ opt( spaceChar | whitespace )
+    (stringCI( "or" ) | stringCI( "and" )).map( LogicalOperator.withName ) <~ opt( spaceChar | whitespace )
 
   val additional_word: Parser[( LogicalOperator, SearchWord )] =
     logical_operator ~ word.map( SearchWord( _, None ) )
