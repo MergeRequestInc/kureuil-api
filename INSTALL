@@ -1,0 +1,12 @@
+Bienvenu à ce petit tuto pour lancer K.U.R.E.U.I.L
+
+Ce tutoriel va consister en deux commandes:
+./docker-loader.sh
+
+Ce script va aller chercher les trois images docker nécessaires à l'utilisation de l'api.
+
+./docker-compose up
+
+Cette commande va lancer les images pour lancer l'api. En rajoute l'option -d à la fin, vous pouvez détacher au lancement les images.
+
+Au besoin, lance les commandes avec sudo. 
